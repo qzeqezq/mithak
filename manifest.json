@@ -1,0 +1,22 @@
+{
+  "name": "ميثاق - زاد المسلم اليومي",
+  "short_name": "ميثاق",
+  "description": "تطبيق لتتبع العبادات اليومية ومواقيت الصلاة بدقة",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#F4F1EA",
+  "theme_color": "#C0392B",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/fluency/192/mosque.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://img.icons8.com/fluency/512/mosque.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
