@@ -3,278 +3,162 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ميثاق - زاد المسلم</title>
-    
-    <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/48/mosque.png">
-    <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/192/mosque.png">
-    <meta name="theme-color" content="#C0392B">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
+    <title>نظام إدارة وتسوّق التجار</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital@1&family=Cairo:wght@400;700&display=swap" rel="stylesheet">
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: { 'bg-main': '#F4F1EA', 'farid': '#C0392B', 'sunnah': '#D4AC0D', 'nafila': '#27AE60', 'deep-blue': '#2C3E50' },
-                    fontFamily: { 'amiri': ['Amiri', 'serif'], 'cairo': ['Cairo', 'sans-serif'] }
-                }
-            }
-        }
-    </script>
     <style>
-        body { font-family: 'Cairo', sans-serif; background-color: #F4F1EA; -webkit-tap-highlight-color: transparent; }
-        .quran-font { font-family: 'Amiri', serif; }
-        .progress-bar { transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
-        [x-cloak] { display: none !important; }
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
+        body { font-family: 'Tajawal', sans-serif; }
     </style>
 </head>
-<body x-data="mithaqApp()" x-init="init()" x-cloak>
+<body class="bg-gray-100 p-5">
 
-    <header class="bg-white p-6 shadow-sm text-center border-b border-stone-200 sticky top-0 z-50">
-        <h1 class="text-3xl font-bold text-farid">مِـيـثـاق</h1>
-        <div class="mt-2 flex flex-col items-center">
-            <div class="text-lg font-mono font-bold text-deep-blue tracking-widest" x-text="fullTime"></div>
-            <button @click="showLocationModal = true" class="text-[10px] text-farid font-bold bg-farid/5 px-3 py-1 rounded-full mt-1 border border-farid/10 flex items-center gap-1">
-                📍 <span x-text="locationName"></span> (تغيير)
-            </button>
-        </div>
-        <div class="mt-4 max-w-md mx-auto">
-            <div class="flex justify-between items-center mb-1">
-                <span class="text-xs font-bold text-deep-blue" x-text="getRank()"></span>
-                <span class="text-xs font-mono text-farid" x-text="progress + '%'"></span>
-            </div>
-            <div class="w-full bg-stone-100 h-2 rounded-full overflow-hidden">
-                <div class="bg-farid h-full progress-bar" :style="'width:' + progress + '%'"></div>
-            </div>
-        </div>
-    </header>
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold text-center mb-8 text-blue-800">منصة التاجر الذكية</h1>
 
-    <div x-show="showLocationModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" x-transition x-cloak>
-        <div class="bg-white rounded-[2rem] p-6 w-full max-w-sm shadow-2xl">
-            <h3 class="text-xl font-bold text-deep-blue mb-4 text-center">ضبط الموقع</h3>
-            <div class="space-y-3">
-                <button @click="detectLocation()" class="w-full p-4 bg-farid text-white rounded-2xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-all">
-                    <span x-show="!isDetecting">🌐 تحديد تلقائي (GPS)</span>
-                    <span x-show="isDetecting" class="animate-pulse text-sm">جاري الطلب من القمر الصناعي...</span>
-                </button>
-                <div class="text-center my-2 text-stone-400 text-[10px] font-bold uppercase tracking-widest">أو اختر يدوياً</div>
-                <select x-model="selectedCity" @change="setManualLocation()" class="w-full p-4 bg-stone-100 rounded-2xl font-bold text-deep-blue outline-none border-2 border-transparent focus:border-farid transition-all">
-                    <option value="">اختر الولاية...</option>
-                    <template x-for="city in cities" :key="city.name">
-                        <option :value="JSON.stringify(city)" x-text="city.name"></option>
-                    </template>
-                </select>
-                <button @click="showLocationModal = false" class="w-full p-2 text-stone-400 text-sm font-bold mt-2">إغلاق</button>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-4 border-b pb-2">إضافة سلعة جديدة</h2>
+                <div class="space-y-4">
+                    <input type="text" id="pName" placeholder="اسم السلعة" class="w-full p-2 border rounded">
+                    <input type="number" id="pPrice" placeholder="السعر" class="w-full p-2 border rounded">
+                    <select id="pCategory" class="w-full p-2 border rounded">
+                        <option value="الحليب ومشتقاته">الحليب ومشتقاته</option>
+                        <option value="اللحوم">اللحوم</option>
+                        <option value="الخضر والفواكه">الخضر والفواكه</option>
+                        <option value="مواد تنظيف">مواد تنظيف</option>
+                    </select>
+                    <div class="flex gap-2">
+                        <input type="text" id="pBarcode" placeholder="الباركود" class="w-full p-2 border rounded">
+                        <button onclick="simulateScan()" class="bg-gray-200 px-3 rounded hover:bg-gray-300">📷</button>
+                    </div>
+                    <button onclick="addProduct()" class="w-full bg-blue-600 text-white py-2 rounded font-bold hover:bg-blue-700">إضافة للقائمة</button>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2 space-y-6">
+                <div class="bg-white p-4 rounded-lg shadow-md flex gap-4">
+                    <input type="text" id="searchBar" onkeyup="filterProducts()" placeholder="ابحث بالاسم أو الباركود..." class="w-full p-2 border rounded">
+                    <select id="filterCategory" onchange="filterProducts()" class="p-2 border rounded">
+                        <option value="الكل">كل الأصناف</option>
+                        <option value="الحليب ومشتقاته">الحليب ومشتقاته</option>
+                        <option value="اللحوم">اللحوم</option>
+                        <option value="الخضر والفواكه">الخضر والفواكه</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="productsList">
+                    </div>
+            </div>
+        </div>
+
+        <div class="fixed bottom-5 left-5 bg-green-600 text-white p-4 rounded-full shadow-xl cursor-pointer hover:scale-110 transition" onclick="toggleCart()">
+            🛒 <span id="cartCount">0</span>
+        </div>
+
+        <div id="cartModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <div class="bg-white w-full max-w-md rounded-lg p-6">
+                <h2 class="text-2xl font-bold mb-4 text-center">سلة المشتريات</h2>
+                <div id="cartItems" class="max-h-64 overflow-y-auto mb-4 border-b pb-4"></div>
+                <div class="text-xl font-bold text-left mb-4">الإجمالي: <span id="cartTotal">0</span> دج</div>
+                <div class="flex gap-2">
+                    <button onclick="toggleCart()" class="flex-1 bg-gray-500 text-white py-2 rounded">إغلاق</button>
+                    <button onclick="clearCart()" class="flex-1 bg-red-500 text-white py-2 rounded">تفريغ</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <nav class="flex justify-center my-4 gap-2 px-4 max-w-md mx-auto">
-        <button @click="tab = 'now'" :class="tab === 'now' ? 'bg-farid text-white shadow-md' : 'bg-white text-stone-400'" class="flex-1 py-2 rounded-xl font-bold transition-all">الآن</button>
-        <button @click="tab = 'planner'" :class="tab === 'planner' ? 'bg-deep-blue text-white shadow-md' : 'bg-white text-stone-400'" class="flex-1 py-2 rounded-xl font-bold transition-all">المخطط</button>
-    </nav>
-
-    <main class="max-w-xl mx-auto px-4 pb-24">
-        <template x-if="tab === 'now'">
-            <div class="space-y-6">
-                <template x-if="activeMoment">
-                    <div class="bg-white p-8 rounded-[2rem] shadow-xl border-t-8 border-farid text-center relative overflow-hidden">
-                        <div class="absolute -right-10 -top-10 text-9xl opacity-5 select-none" x-text="activeMoment.icon"></div>
-                        <span class="inline-block p-4 bg-farid/10 rounded-full text-4xl mb-4" x-text="activeMoment.icon"></span>
-                        <p class="text-[10px] font-bold text-farid uppercase tracking-widest mb-1" x-text="'وقت ' + activeMoment.category"></p>
-                        <h3 class="text-3xl font-black text-deep-blue mb-6" x-text="activeMoment.name"></h3>
-                        <div class="p-6 bg-stone-50 rounded-2xl border-dashed border-2 border-stone-200 mb-8">
-                            <p class="text-lg text-stone-700 quran-font italic leading-relaxed" x-text="'« ' + activeMoment.dalil + ' »'"></p>
-                        </div>
-                        <button @click="toggleDeed(activeMoment.id)" class="w-full py-4 rounded-2xl font-bold text-white transition-all active:scale-95 shadow-lg shadow-farid/20" :class="isCompleted(activeMoment.id) ? 'bg-nafila' : 'bg-farid'">
-                            <span x-text="isCompleted(activeMoment.id) ? 'تمت العبادة بحمد الله ✓' : 'تأكيد الإتمام الآن'"></span>
-                        </button>
-                    </div>
-                </template>
-            </div>
-        </template>
-
-        <template x-if="tab === 'planner'">
-            <div class="space-y-3">
-                <template x-for="deed in deeds" :key="deed.id">
-                    <div @click="toggleDeed(deed.id)" class="bg-white p-4 rounded-2xl shadow-sm flex items-center gap-4 cursor-pointer transition-all active:scale-95 border-2" :class="isCompleted(deed.id) ? 'opacity-60 border-transparent' : 'border-white'">
-                        <div :class="isCompleted(deed.id) ? 'bg-farid border-farid' : 'bg-white border-stone-200'" class="w-6 h-6 border-2 rounded flex items-center justify-center transition-colors">
-                            <span x-show="isCompleted(deed.id)" class="text-white text-[10px]">✓</span>
-                        </div>
-                        <div class="flex-1">
-                            <h4 class="font-bold text-sm text-deep-blue" :class="isCompleted(deed.id) ? 'line-through text-stone-400' : ''" x-text="deed.name"></h4>
-                            <p class="text-[10px] text-stone-500 quran-font mt-1 leading-tight" x-text="deed.dalil"></p>
-                        </div>
-                        <div :class="deed.color" class="w-1 h-8 rounded-full"></div>
-                    </div>
-                </template>
-            </div>
-        </template>
-    </main>
-
     <script>
-        function mithaqApp() {
-            return {
-                tab: 'now',
-                prayers: null,
-                fullTime: '',
-                showLocationModal: false,
-                isDetecting: false,
-                locationName: localStorage.getItem('locName') || 'متليلي، الجزائر',
-                selectedCity: '',
-                completedDeeds: JSON.parse(localStorage.getItem('completedDeeds') || '[]'),
-                lastResetDate: localStorage.getItem('lastResetDate'),
-                
-                cities: [
-                    { name: 'الجزائر العاصمة', lat: 36.75, lon: 3.05 },
-                    { name: 'غرداية (متليلي)', lat: 32.27, lon: 3.62 },
-                    { name: 'وهران', lat: 35.69, lon: -0.63 },
-                    { name: 'قسنطينة', lat: 36.36, lon: 6.61 },
-                    { name: 'سطيف', lat: 36.19, lon: 5.41 },
-                    { name: 'تمنراست', lat: 22.78, lon: 5.52 }
-                ],
+        let products = [
+            { id: 1, name: "حليب كونيا", price: 100, category: "الحليب ومشتقاته", barcode: "12345" },
+            { id: 2, name: "تفاح أحمر", price: 350, category: "الخضر والفواكه", barcode: "67890" }
+        ];
+        let cart = [];
 
-                deeds: [
-                    { id: 'sunnah_12', name: 'السنن الرواتب (12 ركعة)', color: 'bg-sunnah', dalil: 'بني له بهن بيت في الجنة' },
-                    { id: 'adhkar_sm', name: 'أذكار الصباح والمساء', color: 'bg-nafila', dalil: 'ألا بذكر الله تطمئن القلوب' },
-                    { id: 'quran_daily', name: 'ورد القرآن اليومي', color: 'bg-farid', dalil: 'ورتل القرآن ترتيلاً' },
-                    { id: 'duha', name: 'صلاة الضحى', color: 'bg-sunnah', dalil: 'تجزئ عن صدقات أعضائك' },
-                    { id: 'witr', name: 'صلاة الوتر', color: 'bg-farid', dalil: 'إن الله وتر يحب الوتر' },
-                    { id: 'istighfar', name: 'الاستغفار (100+)', color: 'bg-nafila', dalil: 'فقلت استغفروا ربكم إنه كان غفاراً' },
-                    { id: 'salat_nabi', name: 'الصلاة على النبي ﷺ', color: 'bg-farid', dalil: 'بها ترفع الدرجات وتكفر السيئات' },
-                    { id: 'baqiyat', name: 'الباقيات الصالحات', color: 'bg-sunnah', dalil: 'سبحان الله، والحمد لله، ولا إله إلا الله' },
-                    { id: 'sadaqa', name: 'صدقة اليوم / إحسان', color: 'bg-nafila', dalil: 'صنائع المعروف تقي مصارع السوء' },
-                    { id: 'qiyam', name: 'قيام الليل', color: 'bg-deep-blue', dalil: 'شرف المؤمن صلاته بالليل' },
-                    { id: 'sleep_dhikr', name: 'أذكار النوم', color: 'bg-stone-400', dalil: 'باسمك ربي وضعت جنبي' },
-                    { id: 'tongue', name: 'حفظ اللسان وكف الأذى', color: 'bg-deep-blue', dalil: 'فليقل خيراً أو ليصمت' }
-                ],
+        function renderProducts(data) {
+            const list = document.getElementById('productsList');
+            list.innerHTML = data.map(p => `
+                <div class="bg-white p-4 rounded-lg shadow border-r-4 border-blue-500 flex justify-between items-center cursor-pointer hover:bg-blue-50" onclick="addToCart(${p.id})">
+                    <div>
+                        <h3 class="font-bold text-lg">${p.name}</h3>
+                        <p class="text-sm text-gray-500">${p.category} | ${p.barcode}</p>
+                    </div>
+                    <div class="text-blue-600 font-bold">${p.price} دج</div>
+                </div>
+            `).join('');
+        }
 
-                init() {
-                    this.updateClock();
-                    const savedLat = localStorage.getItem('lat') || 32.27;
-                    const savedLon = localStorage.getItem('lon') || 3.62;
-                    this.fetchPrayers(savedLat, savedLon);
-                    this.checkAndReset();
-                    setInterval(() => this.updateClock(), 1000);
-                    setInterval(() => this.checkAndReset(), 60000);
-                },
+        function addProduct() {
+            const name = document.getElementById('pName').value;
+            const price = document.getElementById('pPrice').value;
+            const category = document.getElementById('pCategory').value;
+            const barcode = document.getElementById('pBarcode').value;
 
-                updateClock() {
-                    this.fullTime = new Date().toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-                },
-
-                async fetchPrayers(lat, lon) {
-                    try {
-                        const res = await fetch(`https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lon}&method=3`);
-                        const data = await res.json();
-                        this.prayers = data.data.timings;
-                    } catch (e) { console.log("Offline or Error"); }
-                },
-
-                detectLocation() {
-                    if (navigator.geolocation) {
-                        this.isDetecting = true;
-                        navigator.geolocation.getCurrentPosition(
-                            pos => {
-                                const { latitude, longitude } = pos.coords;
-                                this.saveLocation(latitude, longitude, 'موقعي الحالي');
-                                this.isDetecting = false;
-                            },
-                            err => {
-                                this.isDetecting = false;
-                                alert("لم نتمكن من جلب موقعك. تأكد من تفعيل الـ GPS ومنح المتصفح إذن الوصول.");
-                            },
-                            { enableHighAccuracy: true, timeout: 10000 }
-                        );
-                    }
-                },
-
-                setManualLocation() {
-                    if (this.selectedCity) {
-                        const city = JSON.parse(this.selectedCity);
-                        this.saveLocation(city.lat, city.lon, city.name);
-                    }
-                },
-
-                saveLocation(lat, lon, name) {
-                    localStorage.setItem('lat', lat);
-                    localStorage.setItem('lon', lon);
-                    localStorage.setItem('locName', name);
-                    this.locationName = name;
-                    this.fetchPrayers(lat, lon);
-                    this.showLocationModal = false;
-                },
-
-                get activeMoment() {
-                    if (!this.prayers) return null;
-                    const now = new Date();
-                    const hours = now.getHours(), mins = now.getMinutes();
-                    const timeStr = hours.toString().padStart(2, '0') + ':' + mins.toString().padStart(2, '0');
-                    const day = now.getDay();
-
-                    const prayerKeys = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
-                    const prayerNames = { Fajr: 'صلاة الفجر', Dhuhr: 'صلاة الظهر', Asr: 'صلاة العصر', Maghrib: 'صلاة المغرب', Isha: 'صلاة العشاء' };
-                    const prayerAyat = { Fajr: 'وقرآن الفجر كان مشهوداً', Dhuhr: 'أقم الصلاة لدلوك الشمس', Asr: 'حافظوا على الصلاة الوسطى', Maghrib: 'فسبحان الله حين تمسون', Isha: 'ومن بعد صلاة العشاء' };
-
-                    for (let p of prayerKeys) {
-                        const pTime = this.prayers[p];
-                        const [ph, pm] = pTime.split(':').map(Number);
-                        const diff = (hours * 60 + mins) - (ph * 60 + pm);
-                        if (diff >= 0 && diff < 45) return { id: 'p_'+p, name: prayerNames[p], category: 'فريضة', dalil: prayerAyat[p], icon: '🕌' };
-                    }
-
-                    if (timeStr >= this.prayers['Fajr'] && timeStr < '08:30') return { id: 'adhkar_sm', name: 'أذكار الصباح', category: 'ذكر', dalil: 'وسبح بحمد ربك قبل طلوع الشمس', icon: '🌅' };
-                    if (timeStr >= '08:30' && timeStr < '11:00') return { id: 'duha', name: 'صلاة الضحى', category: 'سنة', dalil: 'صلاة الأوابين حين ترمض الفصال', icon: '☀️' };
-                    if (timeStr >= this.prayers['Asr'] && timeStr < this.prayers['Maghrib']) {
-                         if (day === 5) return { id: 'friday', name: 'ساعة الاستجابة', category: 'يوم الجمعة', dalil: 'فيها ساعة لا يوافقها عبد مسلم إلا أعطاه الله إياه', icon: '🤲' };
-                         return { id: 'adhkar_sm', name: 'أذكار المساء', category: 'ذكر', dalil: 'وسبح بحمد ربك قبل الغروب', icon: '🌆' };
-                    }
-                    if (timeStr >= '01:00' && timeStr < this.prayers['Fajr']) return { id: 'qiyam', name: 'قيام الليل', category: 'نافلة', dalil: 'ومن الليل فتهجد به', icon: '🌙' };
-
-                    return { id: 'general', name: 'ذكر الله المطلق', category: 'عبادة قلبية', dalil: 'فاذكروني أذكركم', icon: '📿' };
-                },
-
-                checkAndReset() {
-                    const today = new Date().toLocaleDateString('en-GB');
-                    if (this.lastResetDate !== today) {
-                        this.completedDeeds = [];
-                        this.lastResetDate = today;
-                        localStorage.setItem('completedDeeds', '[]');
-                        localStorage.setItem('lastResetDate', today);
-                    }
-                },
-
-                toggleDeed(id) {
-                    this.completedDeeds = this.completedDeeds.includes(id) ? this.completedDeeds.filter(d => d !== id) : [...this.completedDeeds, id];
-                    localStorage.setItem('completedDeeds', JSON.stringify(this.completedDeeds));
-                },
-
-                isCompleted(id) { return this.completedDeeds.includes(id); },
-                get progress() { 
-                    const normalDeeds = this.completedDeeds.filter(id => !id.startsWith('p_'));
-                    return Math.round((normalDeeds.length / this.deeds.length) * 100); 
-                },
-                getRank() { const p = this.progress; return p < 40 ? "مُجاهد ⚔️" : (p < 80 ? "مُثابر ✨" : "سابق بالخيرات 🏆"); }
+            if(name && price && barcode) {
+                products.push({ id: Date.now(), name, price: Number(price), category, barcode });
+                renderProducts(products);
+                clearInputs();
+            } else {
+                alert("يرجى ملء جميع الحقول");
             }
         }
 
-        // تسجيل الـ Service Worker لضمان استيفاء شروط PWA
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                const swCode = `
-                    self.addEventListener('install', e => self.skipWaiting());
-                    self.addEventListener('fetch', e => e.respondWith(fetch(e.request)));
-                `;
-                const blob = new Blob([swCode], { type: 'text/javascript' });
-                const url = URL.createObjectURL(blob);
-                navigator.serviceWorker.register(url);
+        function filterProducts() {
+            const term = document.getElementById('searchBar').value.toLowerCase();
+            const cat = document.getElementById('filterCategory').value;
+
+            const filtered = products.filter(p => {
+                const matchesSearch = p.name.toLowerCase().includes(term) || p.barcode.includes(term);
+                const matchesCat = cat === "الكل" || p.category === cat;
+                return matchesSearch && matchesCat;
             });
+            renderProducts(filtered);
         }
+
+        function addToCart(id) {
+            const product = products.find(p => p.id === id);
+            cart.push(product);
+            updateCartUI();
+        }
+
+        function updateCartUI() {
+            document.getElementById('cartCount').innerText = cart.length;
+            const cartItems = document.getElementById('cartItems');
+            const total = cart.reduce((sum, p) => sum + p.price, 0);
+            
+            cartItems.innerHTML = cart.map((p, index) => `
+                <div class="flex justify-between py-2 border-b text-sm">
+                    <span>${p.name}</span>
+                    <span class="font-bold">${p.price} دج</span>
+                </div>
+            `).join('');
+            document.getElementById('cartTotal').innerText = total;
+        }
+
+        function toggleCart() {
+            document.getElementById('cartModal').classList.toggle('hidden');
+        }
+
+        function clearCart() {
+            cart = [];
+            updateCartUI();
+            toggleCart();
+        }
+
+        function simulateScan() {
+            const mockBarcode = Math.floor(Math.random() * 90000) + 10000;
+            document.getElementById('pBarcode').value = mockBarcode;
+        }
+
+        function clearInputs() {
+            document.getElementById('pName').value = '';
+            document.getElementById('pPrice').value = '';
+            document.getElementById('pBarcode').value = '';
+        }
+
+        // التشغيل الأولي
+        renderProducts(products);
     </script>
 </body>
 </html>
