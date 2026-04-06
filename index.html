@@ -3,162 +3,196 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام إدارة وتسوّق التجار</title>
+    <title>نظام التاجر برو - مع ماسح الباركود</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
         body { font-family: 'Tajawal', sans-serif; }
+        #reader { width: 100%; border-radius: 15px; overflow: hidden; }
     </style>
 </head>
-<body class="bg-gray-100 p-5">
+<body class="bg-gray-100 pb-24">
 
-    <div class="max-w-6xl mx-auto">
-        <h1 class="text-3xl font-bold text-center mb-8 text-blue-800">منصة التاجر الذكية</h1>
+    <div class="max-w-4xl mx-auto p-4">
+        <header class="flex justify-between items-center mb-6 bg-white p-4 rounded-2xl shadow-sm">
+            <h1 class="text-xl font-bold text-indigo-800">التاجر الذكي ⚡</h1>
+            <button onclick="openScanner('cart')" class="bg-indigo-600 text-white px-4 py-2 rounded-xl flex items-center gap-2">
+                <span>📷 مسح للبيع</span>
+            </button>
+        </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            <div class="bg-white p-6 rounded-lg shadow-md">
-                <h2 class="text-xl font-semibold mb-4 border-b pb-2">إضافة سلعة جديدة</h2>
-                <div class="space-y-4">
-                    <input type="text" id="pName" placeholder="اسم السلعة" class="w-full p-2 border rounded">
-                    <input type="number" id="pPrice" placeholder="السعر" class="w-full p-2 border rounded">
-                    <select id="pCategory" class="w-full p-2 border rounded">
-                        <option value="الحليب ومشتقاته">الحليب ومشتقاته</option>
-                        <option value="اللحوم">اللحوم</option>
-                        <option value="الخضر والفواكه">الخضر والفواكه</option>
-                        <option value="مواد تنظيف">مواد تنظيف</option>
-                    </select>
-                    <div class="flex gap-2">
-                        <input type="text" id="pBarcode" placeholder="الباركود" class="w-full p-2 border rounded">
-                        <button onclick="simulateScan()" class="bg-gray-200 px-3 rounded hover:bg-gray-300">📷</button>
-                    </div>
-                    <button onclick="addProduct()" class="w-full bg-blue-600 text-white py-2 rounded font-bold hover:bg-blue-700">إضافة للقائمة</button>
-                </div>
-            </div>
-
-            <div class="lg:col-span-2 space-y-6">
-                <div class="bg-white p-4 rounded-lg shadow-md flex gap-4">
-                    <input type="text" id="searchBar" onkeyup="filterProducts()" placeholder="ابحث بالاسم أو الباركود..." class="w-full p-2 border rounded">
-                    <select id="filterCategory" onchange="filterProducts()" class="p-2 border rounded">
-                        <option value="الكل">كل الأصناف</option>
-                        <option value="الحليب ومشتقاته">الحليب ومشتقاته</option>
-                        <option value="اللحوم">اللحوم</option>
-                        <option value="الخضر والفواكه">الخضر والفواكه</option>
-                    </select>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="productsList">
-                    </div>
-            </div>
-        </div>
-
-        <div class="fixed bottom-5 left-5 bg-green-600 text-white p-4 rounded-full shadow-xl cursor-pointer hover:scale-110 transition" onclick="toggleCart()">
-            🛒 <span id="cartCount">0</span>
-        </div>
-
-        <div id="cartModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-            <div class="bg-white w-full max-w-md rounded-lg p-6">
-                <h2 class="text-2xl font-bold mb-4 text-center">سلة المشتريات</h2>
-                <div id="cartItems" class="max-h-64 overflow-y-auto mb-4 border-b pb-4"></div>
-                <div class="text-xl font-bold text-left mb-4">الإجمالي: <span id="cartTotal">0</span> دج</div>
+        <div class="bg-white p-6 rounded-2xl shadow-sm mb-6">
+            <h2 class="font-bold mb-4 text-gray-700">تسجيل سلعة جديدة</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input type="text" id="pName" placeholder="اسم المنتج" class="p-3 bg-gray-50 border rounded-xl">
                 <div class="flex gap-2">
-                    <button onclick="toggleCart()" class="flex-1 bg-gray-500 text-white py-2 rounded">إغلاق</button>
-                    <button onclick="clearCart()" class="flex-1 bg-red-500 text-white py-2 rounded">تفريغ</button>
+                    <input type="text" id="pBarcode" placeholder="الباركود" class="flex-1 p-3 bg-gray-50 border rounded-xl">
+                    <button onclick="openScanner('register')" class="bg-gray-200 px-4 rounded-xl">📷</button>
                 </div>
+                <input type="number" id="pPrice" placeholder="السعر" class="p-3 bg-gray-50 border rounded-xl">
+                <div class="flex gap-2">
+                    <select id="pUnit" class="flex-1 p-3 bg-gray-50 border rounded-xl text-sm">
+                        <option value="قطعة">بالقطعة</option>
+                        <option value="كجم">بالوزن (كجم)</option>
+                    </select>
+                    <select id="pCategory" class="flex-1 p-3 bg-gray-50 border rounded-xl text-sm"></select>
+                </div>
+                <button onclick="addProduct()" class="md:col-span-2 bg-green-600 text-white py-3 rounded-xl font-bold">حفظ في المخزن</button>
+            </div>
+        </div>
+
+        <div id="productsList" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+    </div>
+
+    <div id="scannerModal" class="hidden fixed inset-0 bg-black/90 z-50 flex flex-col p-6">
+        <div class="flex justify-between text-white mb-4">
+            <h3 id="scannerTitle">جارٍ فتح الكاميرا...</h3>
+            <button onclick="closeScanner()" class="text-2xl">&times;</button>
+        </div>
+        <div id="reader" class="bg-white"></div>
+        <p class="text-white text-center mt-4 text-sm opacity-70">ضع الباركود في منتصف المربع</p>
+    </div>
+
+    <div id="weightModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-xs rounded-3xl p-8 shadow-2xl text-center">
+            <div class="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">⚖️</div>
+            <h3 id="weightProductName" class="font-bold text-xl mb-2 text-gray-800">اسم المنتج</h3>
+            <p class="text-gray-500 text-sm mb-6">يرجى تحديد الوزن المطلوب بالكيلوجرام</p>
+            <input type="number" id="weightInput" step="0.01" class="w-full text-center text-3xl font-bold p-3 border-b-4 border-indigo-500 focus:outline-none mb-6" placeholder="0.00">
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="closeWeightModal()" class="bg-gray-100 py-3 rounded-2xl font-bold">إلغاء</button>
+                <button onclick="confirmWeightAdd()" class="bg-indigo-600 text-white py-3 rounded-2xl font-bold shadow-lg shadow-indigo-200">تأكيد</button>
             </div>
         </div>
     </div>
 
-    <script>
-        let products = [
-            { id: 1, name: "حليب كونيا", price: 100, category: "الحليب ومشتقاته", barcode: "12345" },
-            { id: 2, name: "تفاح أحمر", price: 350, category: "الخضر والفواكه", barcode: "67890" }
-        ];
-        let cart = [];
+    <div class="fixed bottom-6 left-6 right-6 bg-white border shadow-2xl rounded-2xl p-4 flex justify-between items-center" onclick="toggleCart()">
+        <div class="flex items-center gap-4">
+            <div class="bg-indigo-600 text-white w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold">🛒</div>
+            <div>
+                <p class="text-xs text-gray-400 font-bold">الإجمالي</p>
+                <p class="text-lg font-black text-indigo-900"><span id="totalDisplay">0</span> دج</p>
+            </div>
+        </div>
+        <span id="cartCount" class="bg-red-500 text-white px-3 py-1 rounded-full text-xs">0 عناصر</span>
+    </div>
 
-        function renderProducts(data) {
-            const list = document.getElementById('productsList');
-            list.innerHTML = data.map(p => `
-                <div class="bg-white p-4 rounded-lg shadow border-r-4 border-blue-500 flex justify-between items-center cursor-pointer hover:bg-blue-50" onclick="addToCart(${p.id})">
-                    <div>
-                        <h3 class="font-bold text-lg">${p.name}</h3>
-                        <p class="text-sm text-gray-500">${p.category} | ${p.barcode}</p>
-                    </div>
-                    <div class="text-blue-600 font-bold">${p.price} دج</div>
-                </div>
-            `).join('');
+    <script>
+        let categories = ["الحليب ومشتقاته", "اللحوم", "الخضر والفواكه"];
+        let products = [{ id: 101, name: "لحم عجل", price: 1800, unit: "كجم", category: "اللحوم", barcode: "123" }];
+        let cart = [];
+        let html5QrCode;
+        let currentWeightProduct = null;
+
+        // --- وظائف الكاميرا ---
+        function openScanner(mode) {
+            document.getElementById('scannerModal').classList.remove('hidden');
+            document.getElementById('scannerTitle').innerText = mode === 'cart' ? 'مسح لإضافة سلع للسلة' : 'مسح لتسجيل الكود';
+            
+            html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+
+            html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
+                if (mode === 'register') {
+                    document.getElementById('pBarcode').value = decodedText;
+                    closeScanner();
+                } else {
+                    const product = products.find(p => p.barcode === decodedText);
+                    if (product) {
+                        closeScanner();
+                        handleProductSelection(product.id);
+                    } else {
+                        alert("المنتج غير موجود في المخزن!");
+                    }
+                }
+            });
         }
 
-        function addProduct() {
-            const name = document.getElementById('pName').value;
-            const price = document.getElementById('pPrice').value;
-            const category = document.getElementById('pCategory').value;
-            const barcode = document.getElementById('pBarcode').value;
-
-            if(name && price && barcode) {
-                products.push({ id: Date.now(), name, price: Number(price), category, barcode });
-                renderProducts(products);
-                clearInputs();
-            } else {
-                alert("يرجى ملء جميع الحقول");
+        function closeScanner() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById('scannerModal').classList.add('hidden');
+                });
             }
         }
 
-        function filterProducts() {
-            const term = document.getElementById('searchBar').value.toLowerCase();
-            const cat = document.getElementById('filterCategory').value;
-
-            const filtered = products.filter(p => {
-                const matchesSearch = p.name.toLowerCase().includes(term) || p.barcode.includes(term);
-                const matchesCat = cat === "الكل" || p.category === cat;
-                return matchesSearch && matchesCat;
-            });
-            renderProducts(filtered);
+        // --- وظائف الوزن ---
+        function handleProductSelection(id) {
+            const p = products.find(x => x.id === id);
+            if (p.unit === "كجم") {
+                currentWeightProduct = p;
+                document.getElementById('weightProductName').innerText = p.name;
+                document.getElementById('weightInput').value = "";
+                document.getElementById('weightModal').classList.remove('hidden');
+                setTimeout(() => document.getElementById('weightInput').focus(), 300);
+            } else {
+                addToCart(p, 1);
+            }
         }
 
-        function addToCart(id) {
-            const product = products.find(p => p.id === id);
-            cart.push(product);
+        function confirmWeightAdd() {
+            const weight = parseFloat(document.getElementById('weightInput').value);
+            if (weight > 0) {
+                addToCart(currentWeightProduct, weight);
+                closeWeightModal();
+            }
+        }
+
+        function closeWeightModal() {
+            document.getElementById('weightModal').classList.add('hidden');
+            currentWeightProduct = null;
+        }
+
+        // --- إدارة البيانات ---
+        function addProduct() {
+            const name = document.getElementById('pName').value;
+            const price = document.getElementById('pPrice').value;
+            const unit = document.getElementById('pUnit').value;
+            const barcode = document.getElementById('pBarcode').value;
+            const category = document.getElementById('pCategory').value;
+
+            if (name && price) {
+                products.push({ id: Date.now(), name, price: Number(price), unit, category, barcode });
+                renderProducts();
+                resetInputs();
+            }
+        }
+
+        function addToCart(product, qty) {
+            cart.push({ ...product, qty, subtotal: product.price * qty });
             updateCartUI();
         }
 
         function updateCartUI() {
-            document.getElementById('cartCount').innerText = cart.length;
-            const cartItems = document.getElementById('cartItems');
-            const total = cart.reduce((sum, p) => sum + p.price, 0);
-            
-            cartItems.innerHTML = cart.map((p, index) => `
-                <div class="flex justify-between py-2 border-b text-sm">
-                    <span>${p.name}</span>
-                    <span class="font-bold">${p.price} دج</span>
+            const total = cart.reduce((s, i) => s + i.subtotal, 0);
+            document.getElementById('totalDisplay').innerText = total.toLocaleString();
+            document.getElementById('cartCount').innerText = cart.length + " عناصر";
+        }
+
+        function renderProducts() {
+            const container = document.getElementById('productsList');
+            container.innerHTML = products.map(p => `
+                <div onclick="handleProductSelection(${p.id})" class="bg-white p-4 rounded-2xl border-2 border-transparent hover:border-indigo-500 cursor-pointer transition-all flex justify-between items-center shadow-sm">
+                    <div>
+                        <h4 class="font-bold text-gray-800">${p.name}</h4>
+                        <span class="text-xs bg-gray-100 px-2 py-1 rounded text-gray-500">${p.category}</span>
+                    </div>
+                    <div class="text-right text-indigo-600 font-bold">
+                        ${p.price} دج <br> <span class="text-[10px] text-gray-400 italic">/${p.unit}</span>
+                    </div>
                 </div>
             `).join('');
-            document.getElementById('cartTotal').innerText = total;
         }
 
-        function toggleCart() {
-            document.getElementById('cartModal').classList.toggle('hidden');
+        function resetInputs() {
+            ['pName', 'pPrice', 'pBarcode'].forEach(id => document.getElementById(id).value = '');
         }
 
-        function clearCart() {
-            cart = [];
-            updateCartUI();
-            toggleCart();
-        }
-
-        function simulateScan() {
-            const mockBarcode = Math.floor(Math.random() * 90000) + 10000;
-            document.getElementById('pBarcode').value = mockBarcode;
-        }
-
-        function clearInputs() {
-            document.getElementById('pName').value = '';
-            document.getElementById('pPrice').value = '';
-            document.getElementById('pBarcode').value = '';
-        }
-
-        // التشغيل الأولي
-        renderProducts(products);
+        // تهيئة أولية
+        const catSelect = document.getElementById('pCategory');
+        catSelect.innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join('');
+        renderProducts();
     </script>
 </body>
 </html>
