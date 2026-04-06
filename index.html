@@ -2,197 +2,585 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام التاجر برو - مع ماسح الباركود</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>智能商户专业版 | 库存 · 扫码销售 · 称重 · 报表</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
-        body { font-family: 'Tajawal', sans-serif; }
-        #reader { width: 100%; border-radius: 15px; overflow: hidden; }
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
+        * { font-family: 'Tajawal', sans-serif; }
+        body { background: #f3f4f6; }
+        /* تخصيص التبويبات */
+        .tab-active {
+            background-color: #4f46e5;
+            color: white;
+            box-shadow: 0 4px 10px -2px rgba(79,70,229,0.3);
+        }
+        .tab-inactive {
+            background-color: #f9fafb;
+            color: #1f2937;
+        }
+        /* تأثيرات البطاقات */
+        .card-hover:hover {
+            transform: translateY(-2px);
+            transition: all 0.2s ease;
+        }
+        /* شريط التمرير للقوائم */
+        .scrollable-list {
+            max-height: 480px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+        }
+        #reader {
+            width: 100%;
+            border-radius: 20px;
+            overflow: hidden;
+        }
     </style>
 </head>
-<body class="bg-gray-100 pb-24">
+<body class="pb-28">
 
-    <div class="max-w-4xl mx-auto p-4">
-        <header class="flex justify-between items-center mb-6 bg-white p-4 rounded-2xl shadow-sm">
-            <h1 class="text-xl font-bold text-indigo-800">التاجر الذكي ⚡</h1>
-            <button onclick="openScanner('cart')" class="bg-indigo-600 text-white px-4 py-2 rounded-xl flex items-center gap-2">
-                <span>📷 مسح للبيع</span>
-            </button>
-        </header>
-
-        <div class="bg-white p-6 rounded-2xl shadow-sm mb-6">
-            <h2 class="font-bold mb-4 text-gray-700">تسجيل سلعة جديدة</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input type="text" id="pName" placeholder="اسم المنتج" class="p-3 bg-gray-50 border rounded-xl">
-                <div class="flex gap-2">
-                    <input type="text" id="pBarcode" placeholder="الباركود" class="flex-1 p-3 bg-gray-50 border rounded-xl">
-                    <button onclick="openScanner('register')" class="bg-gray-200 px-4 rounded-xl">📷</button>
-                </div>
-                <input type="number" id="pPrice" placeholder="السعر" class="p-3 bg-gray-50 border rounded-xl">
-                <div class="flex gap-2">
-                    <select id="pUnit" class="flex-1 p-3 bg-gray-50 border rounded-xl text-sm">
-                        <option value="قطعة">بالقطعة</option>
-                        <option value="كجم">بالوزن (كجم)</option>
-                    </select>
-                    <select id="pCategory" class="flex-1 p-3 bg-gray-50 border rounded-xl text-sm"></select>
-                </div>
-                <button onclick="addProduct()" class="md:col-span-2 bg-green-600 text-white py-3 rounded-xl font-bold">حفظ في المخزن</button>
-            </div>
-        </div>
-
-        <div id="productsList" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
-    </div>
-
-    <div id="scannerModal" class="hidden fixed inset-0 bg-black/90 z-50 flex flex-col p-6">
-        <div class="flex justify-between text-white mb-4">
-            <h3 id="scannerTitle">جارٍ فتح الكاميرا...</h3>
-            <button onclick="closeScanner()" class="text-2xl">&times;</button>
-        </div>
-        <div id="reader" class="bg-white"></div>
-        <p class="text-white text-center mt-4 text-sm opacity-70">ضع الباركود في منتصف المربع</p>
-    </div>
-
-    <div id="weightModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-xs rounded-3xl p-8 shadow-2xl text-center">
-            <div class="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">⚖️</div>
-            <h3 id="weightProductName" class="font-bold text-xl mb-2 text-gray-800">اسم المنتج</h3>
-            <p class="text-gray-500 text-sm mb-6">يرجى تحديد الوزن المطلوب بالكيلوجرام</p>
-            <input type="number" id="weightInput" step="0.01" class="w-full text-center text-3xl font-bold p-3 border-b-4 border-indigo-500 focus:outline-none mb-6" placeholder="0.00">
-            <div class="grid grid-cols-2 gap-3">
-                <button onclick="closeWeightModal()" class="bg-gray-100 py-3 rounded-2xl font-bold">إلغاء</button>
-                <button onclick="confirmWeightAdd()" class="bg-indigo-600 text-white py-3 rounded-2xl font-bold shadow-lg shadow-indigo-200">تأكيد</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="fixed bottom-6 left-6 right-6 bg-white border shadow-2xl rounded-2xl p-4 flex justify-between items-center" onclick="toggleCart()">
-        <div class="flex items-center gap-4">
-            <div class="bg-indigo-600 text-white w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold">🛒</div>
+    <div class="max-w-5xl mx-auto px-4 py-4">
+        <!-- الهيدر مع شعار وزر المسح العام -->
+        <div class="flex flex-wrap justify-between items-center gap-3 mb-6 bg-white/80 backdrop-blur-sm p-4 rounded-2xl shadow-md sticky top-2 z-20">
             <div>
-                <p class="text-xs text-gray-400 font-bold">الإجمالي</p>
-                <p class="text-lg font-black text-indigo-900"><span id="totalDisplay">0</span> دج</p>
+                <h1 class="text-2xl font-extrabold bg-gradient-to-l from-indigo-700 to-purple-600 bg-clip-text text-transparent">智能商户 <span class="text-indigo-600">PRO</span></h1>
+                <p class="text-xs text-gray-500">نظام متكامل | فواتير · مخزون · مسح ضوئي</p>
+            </div>
+            <button onclick="openScannerForCart()" class="bg-indigo-600 text-white px-5 py-2.5 rounded-xl shadow-lg flex items-center gap-2 transition active:scale-95">
+                <span>📷</span> مسح للبيع
+            </button>
+        </div>
+
+        <!-- تبويبات رئيسية -->
+        <div class="flex gap-2 mb-6">
+            <button id="tabInventoryBtn" class="tab-active flex-1 py-3 rounded-xl font-bold transition-all shadow-sm">📦 المخزون & الإضافة</button>
+            <button id="tabCartBtn" class="tab-inactive flex-1 py-3 rounded-xl font-bold transition-all shadow-sm">🛒 سلة البيع</button>
+            <button id="tabHistoryBtn" class="tab-inactive flex-1 py-3 rounded-xl font-bold transition-all shadow-sm">📜 الفواتير & التقارير</button>
+        </div>
+
+        <!-- ========== لوحة المخزون (إدارة المنتجات) ========= -->
+        <div id="inventoryPanel" class="space-y-6">
+            <!-- بطاقة الإحصائيات السريعة -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="bg-white p-3 rounded-2xl shadow-sm text-center"><span class="text-indigo-600 text-xl font-black" id="statTotalProducts">0</span><p class="text-xs text-gray-500">إجمالي الأصناف</p></div>
+                <div class="bg-white p-3 rounded-2xl shadow-sm text-center"><span class="text-indigo-600 text-xl font-black" id="statTotalStockValue">0</span><p class="text-xs text-gray-500">قيمة المخزون (دج)</p></div>
+                <div class="bg-white p-3 rounded-2xl shadow-sm text-center"><span class="text-red-600 text-xl font-black" id="statLowStock">0</span><p class="text-xs text-gray-500">منتجات منخفضة</p></div>
+                <div class="bg-white p-3 rounded-2xl shadow-sm text-center"><span class="text-green-600 text-xl font-black" id="statTotalSalesRevenue">0</span><p class="text-xs text-gray-500">إجمالي المبيعات</p></div>
+            </div>
+
+            <!-- نموذج إضافة منتج جديد -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <h2 class="font-bold text-gray-700 mb-3 flex items-center gap-2">➕ إضافة سلعة جديدة</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <input type="text" id="pName" placeholder="اسم المنتج" class="p-3 bg-gray-50 border rounded-xl">
+                    <div class="flex gap-2">
+                        <input type="text" id="pBarcode" placeholder="الباركود" class="flex-1 p-3 bg-gray-50 border rounded-xl">
+                        <button onclick="openScannerForRegister()" class="bg-gray-200 px-4 rounded-xl text-lg">📷</button>
+                    </div>
+                    <input type="number" id="pPrice" placeholder="سعر الوحدة (دج)" class="p-3 bg-gray-50 border rounded-xl">
+                    <input type="number" id="pStock" placeholder="الكمية الأولية (للقطع/كجم)" step="any" class="p-3 bg-gray-50 border rounded-xl">
+                    <select id="pUnit" class="p-3 bg-gray-50 border rounded-xl">
+                        <option value="قطعة">قطعة</option>
+                        <option value="كجم">كجم (وزن)</option>
+                    </select>
+                    <div class="flex gap-2">
+                        <select id="pCategory" class="flex-1 p-3 bg-gray-50 border rounded-xl"></select>
+                        <button onclick="addNewCategory()" class="bg-indigo-100 text-indigo-700 px-3 rounded-xl text-sm font-bold">+ تصنيف</button>
+                    </div>
+                    <button onclick="addProduct()" class="md:col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold shadow-sm transition">💾 حفظ في المخزن</button>
+                </div>
+            </div>
+
+            <!-- شريط البحث والفلترة -->
+            <div class="flex flex-wrap gap-2">
+                <input type="text" id="searchProduct" placeholder="🔍 بحث بالاسم / الباركود" class="flex-1 p-3 bg-white border rounded-xl shadow-sm">
+                <select id="filterCategory" class="p-3 bg-white border rounded-xl shadow-sm"></select>
+            </div>
+
+            <!-- قائمة المنتجات مع عمليات التعديل والحذف -->
+            <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div class="p-3 border-b bg-gray-50 font-bold text-gray-600">📋 قائمة المخزون</div>
+                <div id="productsListContainer" class="scrollable-list divide-y divide-gray-100"></div>
             </div>
         </div>
-        <span id="cartCount" class="bg-red-500 text-white px-3 py-1 rounded-full text-xs">0 عناصر</span>
+
+        <!-- ========== سلة البيع ========= -->
+        <div id="cartPanel" class="hidden space-y-5">
+            <div class="bg-white rounded-2xl shadow-sm p-4">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="font-bold text-xl text-indigo-800">🛍️ سلة الشراء</h2>
+                    <button onclick="clearCart()" class="text-red-500 text-sm bg-red-50 px-3 py-1 rounded-full">تفريغ السلة</button>
+                </div>
+                <div id="cartItemsList" class="space-y-3 max-h-96 overflow-y-auto mb-4"></div>
+                <div class="border-t pt-4 flex justify-between items-center text-lg font-bold">
+                    <span>الإجمالي النهائي</span>
+                    <span id="cartTotalPrice" class="text-2xl text-indigo-700">0 دج</span>
+                </div>
+                <button onclick="checkout()" class="w-full mt-5 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold shadow-lg transition">💳 إنهاء الفاتورة & الطباعة</button>
+            </div>
+        </div>
+
+        <!-- ========== سجل الفواتير ========= -->
+        <div id="historyPanel" class="hidden space-y-4">
+            <div class="bg-white rounded-2xl shadow-sm p-4">
+                <h2 class="font-bold text-gray-700 mb-3">📑 المبيعات السابقة</h2>
+                <div id="salesHistoryList" class="space-y-3 max-h-[550px] overflow-y-auto"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- مودال الماسح الضوئي -->
+    <div id="scannerModal" class="hidden fixed inset-0 bg-black/95 z-50 flex flex-col p-5">
+        <div class="flex justify-between text-white mb-3">
+            <h3 id="scannerTitle" class="text-xl">مسح الباركود</h3>
+            <button onclick="closeScanner()" class="text-3xl">&times;</button>
+        </div>
+        <div id="reader" class="bg-black rounded-2xl overflow-hidden"></div>
+        <p class="text-white text-center mt-4 text-sm opacity-70">وجّه الكاميرا إلى الرمز الشريطي</p>
+    </div>
+
+    <!-- مودال إدخال الوزن للمنتجات بالكيلو -->
+    <div id="weightModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 text-center shadow-2xl">
+            <div class="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">⚖️</div>
+            <h3 id="weightProductName" class="font-bold text-xl text-gray-800">المنتج</h3>
+            <p class="text-gray-500 text-sm mb-4">أدخل الوزن بالكيلوجرام</p>
+            <input type="number" id="weightInput" step="0.01" class="w-full text-center text-3xl font-bold p-3 border-b-4 border-indigo-500 focus:outline-none mb-5" placeholder="0.00">
+            <div class="flex gap-3">
+                <button onclick="closeWeightModal()" class="flex-1 bg-gray-100 py-3 rounded-2xl font-bold">إلغاء</button>
+                <button onclick="confirmWeightAdd()" class="flex-1 bg-indigo-600 text-white py-3 rounded-2xl font-bold shadow">تأكيد</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- مودال تعديل المنتج -->
+    <div id="editProductModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-3">
+            <h3 class="font-bold text-xl">✏️ تعديل المنتج</h3>
+            <input type="hidden" id="editId">
+            <input type="text" id="editName" placeholder="الاسم" class="w-full p-3 border rounded-xl">
+            <input type="text" id="editBarcode" placeholder="الباركود" class="w-full p-3 border rounded-xl">
+            <input type="number" id="editPrice" placeholder="السعر" class="w-full p-3 border rounded-xl">
+            <input type="number" id="editStock" placeholder="المخزون" step="any" class="w-full p-3 border rounded-xl">
+            <select id="editUnit" class="w-full p-3 border rounded-xl"><option value="قطعة">قطعة</option><option value="كجم">كجم</option></select>
+            <select id="editCategory" class="w-full p-3 border rounded-xl"></select>
+            <div class="flex gap-3 pt-2">
+                <button onclick="closeEditModal()" class="flex-1 bg-gray-200 py-2 rounded-xl">إلغاء</button>
+                <button onclick="saveProductEdit()" class="flex-1 bg-indigo-600 text-white py-2 rounded-xl">حفظ التعديل</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        let categories = ["الحليب ومشتقاته", "اللحوم", "الخضر والفواكه"];
-        let products = [{ id: 101, name: "لحم عجل", price: 1800, unit: "كجم", category: "اللحوم", barcode: "123" }];
-        let cart = [];
-        let html5QrCode;
-        let currentWeightProduct = null;
+        // ---------- نموذج البيانات الأساسية ----------
+        let products = [];
+        let categories = ["الحليب ومشتقاته", "اللحوم", "الخضر والفواكه", "المشروبات"];
+        let sales = [];      // الفواتير
+        let cart = [];       // { id, name, price, unit, qty, subtotal, productId, isWeight, originalStock? }
 
-        // --- وظائف الكاميرا ---
-        function openScanner(mode) {
-            document.getElementById('scannerModal').classList.remove('hidden');
-            document.getElementById('scannerTitle').innerText = mode === 'cart' ? 'مسح لإضافة سلع للسلة' : 'مسح لتسجيل الكود';
-            
-            html5QrCode = new Html5Qrcode("reader");
-            const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+        let html5QrCode = null;
+        let pendingScannerMode = null;   // 'register' or 'cart'
+        let pendingWeightProduct = null;
 
-            html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
-                if (mode === 'register') {
-                    document.getElementById('pBarcode').value = decodedText;
-                    closeScanner();
-                } else {
-                    const product = products.find(p => p.barcode === decodedText);
-                    if (product) {
-                        closeScanner();
-                        handleProductSelection(product.id);
-                    } else {
-                        alert("المنتج غير موجود في المخزن!");
-                    }
+        // تحميل البيانات من localStorage
+        function loadData() {
+            const storedProducts = localStorage.getItem('merchant_products');
+            const storedCategories = localStorage.getItem('merchant_categories');
+            const storedSales = localStorage.getItem('merchant_sales');
+            products = storedProducts ? JSON.parse(storedProducts) : [
+                { id: 101, name: "لحم عجل", price: 1850, unit: "كجم", category: "اللحوم", barcode: "123456", stock: 25.5 },
+                { id: 102, name: "حليب مبستر", price: 140, unit: "قطعة", category: "الحليب ومشتقاته", barcode: "789012", stock: 40 },
+                { id: 103, name: "تفاح", price: 320, unit: "كجم", category: "الخضر والفواكه", barcode: "345678", stock: 12.3 }
+            ];
+            if (storedCategories) categories = JSON.parse(storedCategories);
+            else categories = ["الحليب ومشتقاته", "اللحوم", "الخضر والفواكه", "المشروبات"];
+            sales = storedSales ? JSON.parse(storedSales) : [];
+            saveAllData();
+        }
+
+        function saveAllData() {
+            localStorage.setItem('merchant_products', JSON.stringify(products));
+            localStorage.setItem('merchant_categories', JSON.stringify(categories));
+            localStorage.setItem('merchant_sales', JSON.stringify(sales));
+        }
+
+        // تحديث كل الواجهات
+        function refreshUI() {
+            renderProductsList();
+            renderCart();
+            renderSalesHistory();
+            updateStats();
+            fillCategoryDropdowns();
+        }
+
+        // إحصائيات سريعة
+        function updateStats() {
+            document.getElementById('statTotalProducts').innerText = products.length;
+            const totalStockValue = products.reduce((sum, p) => sum + (p.price * p.stock), 0);
+            document.getElementById('statTotalStockValue').innerText = totalStockValue.toLocaleString();
+            const lowStockCount = products.filter(p => p.stock < (p.unit === 'كجم' ? 2 : 5)).length;
+            document.getElementById('statLowStock').innerText = lowStockCount;
+            const totalRevenue = sales.reduce((sum, inv) => sum + inv.total, 0);
+            document.getElementById('statTotalSalesRevenue').innerText = totalRevenue.toLocaleString();
+        }
+
+        // ملء قوائم التصنيفات
+        function fillCategoryDropdowns() {
+            const selects = ['pCategory', 'filterCategory', 'editCategory'];
+            selects.forEach(id => {
+                const select = document.getElementById(id);
+                if(select) {
+                    let currentVal = select.value;
+                    select.innerHTML = categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+                    if(currentVal && categories.includes(currentVal)) select.value = currentVal;
                 }
             });
         }
 
-        function closeScanner() {
-            if (html5QrCode) {
-                html5QrCode.stop().then(() => {
-                    document.getElementById('scannerModal').classList.add('hidden');
-                });
-            }
+        // إضافة تصنيف جديد
+        window.addNewCategory = function() {
+            let newCat = prompt("أدخل اسم التصنيف الجديد:");
+            if(newCat && newCat.trim() && !categories.includes(newCat.trim())) {
+                categories.push(newCat.trim());
+                saveAllData();
+                fillCategoryDropdowns();
+            } else if(newCat && categories.includes(newCat.trim())) alert("التصنيف موجود مسبقاً");
         }
 
-        // --- وظائف الوزن ---
-        function handleProductSelection(id) {
-            const p = products.find(x => x.id === id);
-            if (p.unit === "كجم") {
-                currentWeightProduct = p;
-                document.getElementById('weightProductName').innerText = p.name;
-                document.getElementById('weightInput').value = "";
-                document.getElementById('weightModal').classList.remove('hidden');
-                setTimeout(() => document.getElementById('weightInput').focus(), 300);
-            } else {
-                addToCart(p, 1);
-            }
-        }
-
-        function confirmWeightAdd() {
-            const weight = parseFloat(document.getElementById('weightInput').value);
-            if (weight > 0) {
-                addToCart(currentWeightProduct, weight);
-                closeWeightModal();
-            }
-        }
-
-        function closeWeightModal() {
-            document.getElementById('weightModal').classList.add('hidden');
-            currentWeightProduct = null;
-        }
-
-        // --- إدارة البيانات ---
-        function addProduct() {
-            const name = document.getElementById('pName').value;
-            const price = document.getElementById('pPrice').value;
+        // إضافة منتج جديد
+        window.addProduct = function() {
+            const name = document.getElementById('pName').value.trim();
+            const barcode = document.getElementById('pBarcode').value.trim();
+            const price = parseFloat(document.getElementById('pPrice').value);
+            const stock = parseFloat(document.getElementById('pStock').value);
             const unit = document.getElementById('pUnit').value;
-            const barcode = document.getElementById('pBarcode').value;
             const category = document.getElementById('pCategory').value;
-
-            if (name && price) {
-                products.push({ id: Date.now(), name, price: Number(price), unit, category, barcode });
-                renderProducts();
-                resetInputs();
+            if(!name || isNaN(price) || price<=0 || isNaN(stock) || stock<0) {
+                alert("يرجى ملء الاسم والسعر والمخزون بشكل صحيح");
+                return;
             }
+            if(barcode && products.some(p => p.barcode === barcode && p.barcode !== "")) {
+                alert("هذا الباركود موجود مسبقاً");
+                return;
+            }
+            const newProduct = {
+                id: Date.now(),
+                name, barcode: barcode || null,
+                price, stock, unit, category
+            };
+            products.push(newProduct);
+            saveAllData();
+            refreshUI();
+            document.getElementById('pName').value = '';
+            document.getElementById('pBarcode').value = '';
+            document.getElementById('pPrice').value = '';
+            document.getElementById('pStock').value = '';
         }
 
-        function addToCart(product, qty) {
-            cart.push({ ...product, qty, subtotal: product.price * qty });
-            updateCartUI();
-        }
-
-        function updateCartUI() {
-            const total = cart.reduce((s, i) => s + i.subtotal, 0);
-            document.getElementById('totalDisplay').innerText = total.toLocaleString();
-            document.getElementById('cartCount').innerText = cart.length + " عناصر";
-        }
-
-        function renderProducts() {
-            const container = document.getElementById('productsList');
-            container.innerHTML = products.map(p => `
-                <div onclick="handleProductSelection(${p.id})" class="bg-white p-4 rounded-2xl border-2 border-transparent hover:border-indigo-500 cursor-pointer transition-all flex justify-between items-center shadow-sm">
-                    <div>
-                        <h4 class="font-bold text-gray-800">${p.name}</h4>
-                        <span class="text-xs bg-gray-100 px-2 py-1 rounded text-gray-500">${p.category}</span>
+        // عرض المنتجات مع تعديل/حذف
+        function renderProductsList() {
+            const searchTerm = document.getElementById('searchProduct')?.value.toLowerCase() || '';
+            const filterCat = document.getElementById('filterCategory')?.value || '';
+            let filtered = products.filter(p => 
+                (p.name.toLowerCase().includes(searchTerm) || (p.barcode && p.barcode.includes(searchTerm))) &&
+                (filterCat === '' || p.category === filterCat)
+            );
+            const container = document.getElementById('productsListContainer');
+            if(!container) return;
+            if(filtered.length === 0) { container.innerHTML = '<div class="p-5 text-center text-gray-400">لا توجد منتجات</div>'; return; }
+            container.innerHTML = filtered.map(p => `
+                <div class="p-4 flex justify-between items-center hover:bg-gray-50 transition">
+                    <div class="flex-1">
+                        <div class="font-bold text-gray-800">${p.name}</div>
+                        <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs mt-1">
+                            <span class="bg-gray-100 px-2 py-0.5 rounded">${p.category}</span>
+                            <span class="text-indigo-600 font-bold">${p.price} دج / ${p.unit}</span>
+                            <span class="${p.stock < (p.unit==='كجم'?2:5) ? 'text-red-500 font-bold' : 'text-gray-500'}">📦 المخزون: ${p.stock} ${p.unit}</span>
+                        </div>
                     </div>
-                    <div class="text-right text-indigo-600 font-bold">
-                        ${p.price} دج <br> <span class="text-[10px] text-gray-400 italic">/${p.unit}</span>
+                    <div class="flex gap-2">
+                        <button onclick="editProduct(${p.id})" class="bg-amber-50 text-amber-600 px-3 py-1.5 rounded-xl text-sm">✏️</button>
+                        <button onclick="deleteProduct(${p.id})" class="bg-red-50 text-red-500 px-3 py-1.5 rounded-xl text-sm">🗑️</button>
+                        <button onclick="quickAddToCart(${p.id})" class="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-xl text-sm font-bold">➕ بيع</button>
                     </div>
                 </div>
             `).join('');
         }
 
-        function resetInputs() {
-            ['pName', 'pPrice', 'pBarcode'].forEach(id => document.getElementById(id).value = '');
+        window.editProduct = function(id) {
+            const prod = products.find(p => p.id === id);
+            if(!prod) return;
+            document.getElementById('editId').value = prod.id;
+            document.getElementById('editName').value = prod.name;
+            document.getElementById('editBarcode').value = prod.barcode || '';
+            document.getElementById('editPrice').value = prod.price;
+            document.getElementById('editStock').value = prod.stock;
+            document.getElementById('editUnit').value = prod.unit;
+            document.getElementById('editCategory').value = prod.category;
+            fillCategoryDropdowns(); // للتأكد من القائمة
+            document.getElementById('editProductModal').classList.remove('hidden');
+        }
+        window.closeEditModal = function() { document.getElementById('editProductModal').classList.add('hidden'); }
+        window.saveProductEdit = function() {
+            const id = parseInt(document.getElementById('editId').value);
+            const prodIndex = products.findIndex(p => p.id === id);
+            if(prodIndex === -1) return;
+            const newName = document.getElementById('editName').value.trim();
+            const newBarcode = document.getElementById('editBarcode').value.trim();
+            const newPrice = parseFloat(document.getElementById('editPrice').value);
+            const newStock = parseFloat(document.getElementById('editStock').value);
+            const newUnit = document.getElementById('editUnit').value;
+            const newCat = document.getElementById('editCategory').value;
+            if(!newName || isNaN(newPrice) || newPrice<=0 || isNaN(newStock) || newStock<0) { alert("بيانات غير صالحة"); return; }
+            if(newBarcode && products.some(p => p.barcode === newBarcode && p.id !== id)) { alert("باركود مستخدم"); return; }
+            products[prodIndex] = { ...products[prodIndex], name: newName, barcode: newBarcode || null, price: newPrice, stock: newStock, unit: newUnit, category: newCat };
+            saveAllData();
+            refreshUI();
+            closeEditModal();
+        }
+        window.deleteProduct = function(id) {
+            if(confirm("هل أنت متأكد من حذف هذا المنتج؟")) {
+                products = products.filter(p => p.id !== id);
+                saveAllData();
+                refreshUI();
+            }
         }
 
-        // تهيئة أولية
-        const catSelect = document.getElementById('pCategory');
-        catSelect.innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join('');
-        renderProducts();
+        // إضافة سريعة للسلة (من المخزون)
+        window.quickAddToCart = function(productId) {
+            const prod = products.find(p => p.id === productId);
+            if(prod) handleProductToCart(prod);
+        }
+
+        function handleProductToCart(product) {
+            if(product.unit === "كجم") {
+                pendingWeightProduct = product;
+                document.getElementById('weightProductName').innerText = product.name;
+                document.getElementById('weightInput').value = '';
+                document.getElementById('weightModal').classList.remove('hidden');
+                setTimeout(() => document.getElementById('weightInput').focus(), 200);
+            } else {
+                addItemToCart(product, 1);
+            }
+        }
+
+        function addItemToCart(product, quantity) {
+            // التحقق من المخزون الكافي
+            if(product.stock < quantity) {
+                alert(`المخزون غير كافٍ! المتوفر: ${product.stock} ${product.unit}`);
+                return false;
+            }
+            const existingIndex = cart.findIndex(item => item.productId === product.id && item.isWeight === (product.unit === 'كجم'));
+            if(existingIndex !== -1 && product.unit !== 'كجم') {
+                // للقطع يمكن دمج الكمية
+                const newQty = cart[existingIndex].qty + quantity;
+                if(product.stock < newQty) { alert(`المخزون لا يكفي لزيادة الكمية إلى ${newQty}`); return false; }
+                cart[existingIndex].qty = newQty;
+                cart[existingIndex].subtotal = cart[existingIndex].price * newQty;
+            } else {
+                cart.push({
+                    productId: product.id,
+                    name: product.name,
+                    price: product.price,
+                    unit: product.unit,
+                    qty: quantity,
+                    subtotal: product.price * quantity,
+                    isWeight: product.unit === 'كجم'
+                });
+            }
+            renderCart();
+            return true;
+        }
+
+        window.confirmWeightAdd = function() {
+            const weight = parseFloat(document.getElementById('weightInput').value);
+            if(isNaN(weight) || weight <= 0) { alert("أدخل وزناً صحيحاً"); return; }
+            if(pendingWeightProduct && pendingWeightProduct.stock < weight) {
+                alert(`المخزون غير كافٍ! المتوفر: ${pendingWeightProduct.stock} كجم`);
+                closeWeightModal();
+                return;
+            }
+            addItemToCart(pendingWeightProduct, weight);
+            closeWeightModal();
+        }
+        function closeWeightModal() { document.getElementById('weightModal').classList.add('hidden'); pendingWeightProduct = null; }
+
+        // عرض السلة مع إمكانية تعديل الوزن / زيادة القطع
+        function renderCart() {
+            const container = document.getElementById('cartItemsList');
+            if(!container) return;
+            if(cart.length === 0) { container.innerHTML = '<div class="text-center text-gray-400 py-6">السلة فارغة</div>'; document.getElementById('cartTotalPrice').innerText = '0 دج'; return; }
+            let total = 0;
+            container.innerHTML = cart.map((item, idx) => {
+                total += item.subtotal;
+                if(item.isWeight) {
+                    return `<div class="bg-gray-50 p-3 rounded-xl flex justify-between items-center">
+                        <div><span class="font-bold">${item.name}</span><div class="text-xs text-gray-500">${item.price} دج/كجم · الوزن: ${item.qty} كجم</div></div>
+                        <div class="flex items-center gap-3"><span class="font-bold text-indigo-700">${item.subtotal.toLocaleString()} دج</span>
+                        <button onclick="editCartItemWeight(${idx})" class="bg-white border px-3 py-1 rounded-lg text-xs">⚖️ تعديل الوزن</button>
+                        <button onclick="removeCartItem(${idx})" class="text-red-500 text-xl">🗑️</button></div>
+                    </div>`;
+                } else {
+                    return `<div class="bg-gray-50 p-3 rounded-xl flex justify-between items-center">
+                        <div><span class="font-bold">${item.name}</span><div class="text-xs text-gray-500">${item.price} دج/قطعة</div></div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="changeQty(${idx}, -1)" class="bg-white w-7 h-7 rounded-full shadow">-</button>
+                            <span class="w-8 text-center font-bold">${item.qty}</span>
+                            <button onclick="changeQty(${idx}, 1)" class="bg-white w-7 h-7 rounded-full shadow">+</button>
+                            <span class="font-bold w-20 text-right">${item.subtotal.toLocaleString()} دج</span>
+                            <button onclick="removeCartItem(${idx})" class="text-red-500 text-xl mr-1">🗑️</button>
+                        </div>
+                    </div>`;
+                }
+            }).join('');
+            document.getElementById('cartTotalPrice').innerHTML = total.toLocaleString() + ' دج';
+        }
+        window.removeCartItem = function(idx) { cart.splice(idx,1); renderCart(); }
+        window.changeQty = function(idx, delta) {
+            const item = cart[idx];
+            if(item.isWeight) return;
+            const newQty = item.qty + delta;
+            if(newQty < 1) { removeCartItem(idx); return; }
+            const productStock = products.find(p => p.id === item.productId)?.stock;
+            if(productStock !== undefined && newQty > productStock) { alert(`لا يتوفر سوى ${productStock} قطعة`); return; }
+            item.qty = newQty;
+            item.subtotal = item.price * newQty;
+            renderCart();
+        }
+        window.editCartItemWeight = function(idx) {
+            const item = cart[idx];
+            if(!item.isWeight) return;
+            const prod = products.find(p => p.id === item.productId);
+            if(prod) {
+                pendingWeightProduct = prod;
+                document.getElementById('weightProductName').innerText = prod.name;
+                document.getElementById('weightInput').value = item.qty;
+                document.getElementById('weightModal').classList.remove('hidden');
+                // بعد التأكيد، نقوم بتعديل العنصر
+                window.confirmWeightEdit = function() {
+                    const newWeight = parseFloat(document.getElementById('weightInput').value);
+                    if(newWeight>0 && prod.stock >= newWeight) {
+                        cart[idx].qty = newWeight;
+                        cart[idx].subtotal = cart[idx].price * newWeight;
+                        renderCart();
+                        closeWeightModal();
+                    } else alert("وزن غير صالح أو يتجاوز المخزون");
+                    window.confirmWeightAdd = originalConfirm;
+                }
+                const originalConfirm = window.confirmWeightAdd;
+                window.confirmWeightAdd = function() { window.confirmWeightEdit(); window.confirmWeightAdd = originalConfirm; }
+            }
+        }
+        window.clearCart = function() { if(cart.length && confirm("تفريغ السلة بالكامل؟")) { cart = []; renderCart(); } }
+
+        // إنهاء الفاتورة
+        window.checkout = function() {
+            if(cart.length === 0) { alert("السلة فارغة"); return; }
+            // التحقق النهائي من المخزون قبل الخصم
+            for(let item of cart) {
+                const prod = products.find(p => p.id === item.productId);
+                if(!prod) { alert(`المنتج ${item.name} لم يعد موجوداً`); return; }
+                if(prod.stock < item.qty) { alert(`المنتج ${item.name} المخزون غير كافٍ (المتبقي ${prod.stock})`); return; }
+            }
+            // خصم المخزون
+            for(let item of cart) {
+                const prod = products.find(p => p.id === item.productId);
+                prod.stock = parseFloat((prod.stock - item.qty).toFixed(3));
+            }
+            const totalInvoice = cart.reduce((s,i)=>s+i.subtotal,0);
+            const newInvoice = {
+                id: Date.now(),
+                date: new Date().toLocaleString('ar-EG'),
+                items: cart.map(i => ({ name:i.name, price:i.price, qty:i.qty, unit:i.unit, subtotal:i.subtotal })),
+                total: totalInvoice
+            };
+            sales.unshift(newInvoice);
+            saveAllData();
+            cart = [];
+            refreshUI();
+            alert(`تمت الفاتورة بنجاح بقيمة ${totalInvoice.toLocaleString()} دج`);
+            // طباعة فاتورة مبسطة
+            printInvoice(newInvoice);
+        }
+
+        function printInvoice(invoice) {
+            let printWindow = window.open('', '_blank');
+            let itemsHtml = invoice.items.map(i => `<tr><td>${i.name}</td><td>${i.qty} ${i.unit}</td><td>${i.price.toLocaleString()}</td><td>${i.subtotal.toLocaleString()} دج</td></tr>`).join('');
+            printWindow.document.write(`
+                <html dir="rtl"><head><title>فاتورة رقم ${invoice.id}</title><style>body{font-family:sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{border-bottom:1px solid #ddd;padding:8px;text-align:right}</style></head>
+                <body><h2>📄 فاتورة البيع</h2><p>التاريخ: ${invoice.date}</p><table><tr><th>المنتج</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr>${itemsHtml}<tr><td colspan="3"><strong>المجموع</strong></td><td><strong>${invoice.total.toLocaleString()} دج</strong></td></tr></table><br><button onclick="window.print()">🖨️ طباعة</button></body></html>
+            `);
+            printWindow.document.close();
+        }
+
+        function renderSalesHistory() {
+            const container = document.getElementById('salesHistoryList');
+            if(!container) return;
+            if(sales.length === 0) { container.innerHTML = '<div class="text-center text-gray-400 p-5">لا توجد فواتير بعد</div>'; return; }
+            container.innerHTML = sales.map(inv => `
+                <div class="bg-white border rounded-xl p-4 shadow-sm">
+                    <div class="flex justify-between items-center flex-wrap gap-2">
+                        <span class="font-bold text-indigo-700">#${inv.id}</span>
+                        <span class="text-xs text-gray-500">${inv.date}</span>
+                        <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-bold">${inv.total.toLocaleString()} دج</span>
+                        <button onclick="viewInvoiceDetails(${inv.id})" class="text-indigo-600 text-sm underline">تفاصيل</button>
+                        <button onclick="deleteInvoice(${inv.id})" class="text-red-500 text-sm">حذف</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        window.viewInvoiceDetails = function(id) {
+            const inv = sales.find(s => s.id === id);
+            if(inv) alert(`📄 فاتورة ${inv.id}\n${inv.date}\nالبنود:\n${inv.items.map(i=>`${i.name} (${i.qty} ${i.unit}) = ${i.subtotal.toLocaleString()} دج`).join('\n')}\nالإجمالي: ${inv.total.toLocaleString()} دج`);
+        }
+        window.deleteInvoice = function(id) { if(confirm("حذف الفاتورة نهائياً؟")) { sales = sales.filter(s=>s.id !== id); saveAllData(); renderSalesHistory(); updateStats(); } }
+
+        // --- الماسح الضوئي ---
+        window.openScannerForCart = function() { openScanner('cart'); }
+        window.openScannerForRegister = function() { openScanner('register'); }
+        function openScanner(mode) {
+            document.getElementById('scannerModal').classList.remove('hidden');
+            document.getElementById('scannerTitle').innerText = mode === 'cart' ? 'مسح لإضافة المنتج للبيع' : 'مسح لتعبئة الباركود في النموذج';
+            pendingScannerMode = mode;
+            html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 280, height: 180 } };
+            html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
+                if(pendingScannerMode === 'register') {
+                    document.getElementById('pBarcode').value = decodedText;
+                    closeScanner();
+                } else {
+                    const foundProduct = products.find(p => p.barcode === decodedText);
+                    if(foundProduct) { closeScanner(); handleProductToCart(foundProduct); }
+                    else { alert("لم يتم العثور على منتج بهذا الباركود"); closeScanner(); }
+                }
+            }, (err) => { console.warn(err); });
+        }
+        function closeScanner() {
+            if(html5QrCode) { html5QrCode.stop().then(()=>{ document.getElementById('scannerModal').classList.add('hidden'); html5QrCode=null; }).catch(e=>{}); }
+            else document.getElementById('scannerModal').classList.add('hidden');
+        }
+
+        // التبويبات
+        function switchTab(tab) {
+            document.getElementById('inventoryPanel').classList.add('hidden');
+            document.getElementById('cartPanel').classList.add('hidden');
+            document.getElementById('historyPanel').classList.add('hidden');
+            if(tab === 'inventory') document.getElementById('inventoryPanel').classList.remove('hidden');
+            if(tab === 'cart') document.getElementById('cartPanel').classList.remove('hidden');
+            if(tab === 'history') document.getElementById('historyPanel').classList.remove('hidden');
+            const btnInv = document.getElementById('tabInventoryBtn'), btnCart = document.getElementById('tabCartBtn'), btnHist = document.getElementById('tabHistoryBtn');
+            btnInv.classList.toggle('tab-active', tab === 'inventory'); btnInv.classList.toggle('tab-inactive', tab !== 'inventory');
+            btnCart.classList.toggle('tab-active', tab === 'cart'); btnCart.classList.toggle('tab-inactive', tab !== 'cart');
+            btnHist.classList.toggle('tab-active', tab === 'history'); btnHist.classList.toggle('tab-inactive', tab !== 'history');
+        }
+        document.getElementById('tabInventoryBtn').onclick = () => switchTab('inventory');
+        document.getElementById('tabCartBtn').onclick = () => switchTab('cart');
+        document.getElementById('tabHistoryBtn').onclick = () => switchTab('history');
+        document.getElementById('searchProduct').addEventListener('input', () => renderProductsList());
+        document.getElementById('filterCategory').addEventListener('change', () => renderProductsList());
+
+        loadData(); refreshUI(); switchTab('inventory');
     </script>
 </body>
 </html>
