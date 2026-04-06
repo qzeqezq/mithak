@@ -3,218 +3,347 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>智能商户专业版 | 库存 · 扫码销售 · 称重 · 报表</title>
+    <title>هدهد</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
         * { font-family: 'Tajawal', sans-serif; }
         body { background: #f3f4f6; }
-        /* تخصيص التبويبات */
-        .tab-active {
-            background-color: #4f46e5;
+        .tab-active { background-color: #d97706; color: white; box-shadow: 0 4px 10px -2px rgba(217,119,6,0.3); }
+        .tab-inactive { background-color: #f9fafb; color: #1f2937; }
+        .scrollable-list { max-height: 480px; overflow-y: auto; scrollbar-width: thin; }
+        #reader { width: 100%; border-radius: 20px; overflow: hidden; }
+        /* زر الإضافة العائم */
+        .fab-add {
+            position: fixed;
+            bottom: 25px;
+            left: 25px;
+            background-color: #d97706;
             color: white;
-            box-shadow: 0 4px 10px -2px rgba(79,70,229,0.3);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: bold;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: all 0.2s;
+            z-index: 100;
+            border: none;
         }
-        .tab-inactive {
-            background-color: #f9fafb;
-            color: #1f2937;
+        .fab-add:hover {
+            background-color: #b45309;
+            transform: scale(1.05);
         }
-        /* تأثيرات البطاقات */
-        .card-hover:hover {
-            transform: translateY(-2px);
-            transition: all 0.2s ease;
+        /* مودال إضافة السلعة السريع */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
         }
-        /* شريط التمرير للقوائم */
-        .scrollable-list {
-            max-height: 480px;
-            overflow-y: auto;
-            scrollbar-width: thin;
-        }
-        #reader {
+        .modal-content {
+            background: white;
+            border-radius: 2rem;
+            max-width: 500px;
             width: 100%;
-            border-radius: 20px;
-            overflow: hidden;
+            padding: 1.5rem;
+            animation: fadeInUp 0.2s ease;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .activation-card {
+            background: white;
+            border-radius: 2rem;
+            max-width: 450px;
+            width: 90%;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+            animation: fadeInUp 0.4s ease;
+        }
+        .code-input {
+            direction: ltr;
+            text-align: center;
+            font-family: monospace;
+            font-size: 1.3rem;
+            letter-spacing: 1px;
         }
     </style>
 </head>
 <body class="pb-28">
 
-    <div class="max-w-5xl mx-auto px-4 py-4">
-        <!-- الهيدر مع شعار وزر المسح العام -->
-        <div class="flex flex-wrap justify-between items-center gap-3 mb-6 bg-white/80 backdrop-blur-sm p-4 rounded-2xl shadow-md sticky top-2 z-20">
-            <div>
-                <h1 class="text-2xl font-extrabold bg-gradient-to-l from-indigo-700 to-purple-600 bg-clip-text text-transparent">智能商户 <span class="text-indigo-600">PRO</span></h1>
-                <p class="text-xs text-gray-500">نظام متكامل | فواتير · مخزون · مسح ضوئي</p>
-            </div>
-            <button onclick="openScannerForCart()" class="bg-indigo-600 text-white px-5 py-2.5 rounded-xl shadow-lg flex items-center gap-2 transition active:scale-95">
-                <span>📷</span> مسح للبيع
-            </button>
+    <!-- ========== شاشة التفعيل (نظام حماية) ========== -->
+    <div id="activationOverlay">
+        <div class="activation-card">
+            <div class="text-6xl mb-3">🔐</div>
+            <h2 class="text-2xl font-black text-slate-800">تفعيل نظام هدهد</h2>
+            <p class="text-slate-500 text-sm mt-2 mb-6">أدخل رمز الترخيص لبدء استخدام النظام</p>
+            <input type="text" id="activationCodeInput" placeholder="" class="code-input w-full p-3 border-2 border-slate-200 rounded-2xl focus:border-amber-500 outline-none transition mb-4" autocomplete="off">
+            <button onclick="verifyActivation()" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 rounded-2xl transition shadow-lg">🚀 تفعيل</button>
+            <div id="activationErrorMsg" class="text-rose-600 text-sm mt-4 font-medium"></div>
+            <div class="text-xs text-slate-400 mt-5 border-t pt-4"></div> ()<br>النظام يعمل حتى التاريخ المحدد</div>
         </div>
+    </div>
 
-        <!-- تبويبات رئيسية -->
-        <div class="flex gap-2 mb-6">
-            <button id="tabInventoryBtn" class="tab-active flex-1 py-3 rounded-xl font-bold transition-all shadow-sm">📦 المخزون & الإضافة</button>
-            <button id="tabCartBtn" class="tab-inactive flex-1 py-3 rounded-xl font-bold transition-all shadow-sm">🛒 سلة البيع</button>
-            <button id="tabHistoryBtn" class="tab-inactive flex-1 py-3 rounded-xl font-bold transition-all shadow-sm">📜 الفواتير & التقارير</button>
-        </div>
-
-        <!-- ========== لوحة المخزون (إدارة المنتجات) ========= -->
-        <div id="inventoryPanel" class="space-y-6">
-            <!-- بطاقة الإحصائيات السريعة -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div class="bg-white p-3 rounded-2xl shadow-sm text-center"><span class="text-indigo-600 text-xl font-black" id="statTotalProducts">0</span><p class="text-xs text-gray-500">إجمالي الأصناف</p></div>
-                <div class="bg-white p-3 rounded-2xl shadow-sm text-center"><span class="text-indigo-600 text-xl font-black" id="statTotalStockValue">0</span><p class="text-xs text-gray-500">قيمة المخزون (دج)</p></div>
-                <div class="bg-white p-3 rounded-2xl shadow-sm text-center"><span class="text-red-600 text-xl font-black" id="statLowStock">0</span><p class="text-xs text-gray-500">منتجات منخفضة</p></div>
-                <div class="bg-white p-3 rounded-2xl shadow-sm text-center"><span class="text-green-600 text-xl font-black" id="statTotalSalesRevenue">0</span><p class="text-xs text-gray-500">إجمالي المبيعات</p></div>
-            </div>
-
-            <!-- نموذج إضافة منتج جديد -->
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                <h2 class="font-bold text-gray-700 mb-3 flex items-center gap-2">➕ إضافة سلعة جديدة</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <input type="text" id="pName" placeholder="اسم المنتج" class="p-3 bg-gray-50 border rounded-xl">
-                    <div class="flex gap-2">
-                        <input type="text" id="pBarcode" placeholder="الباركود" class="flex-1 p-3 bg-gray-50 border rounded-xl">
-                        <button onclick="openScannerForRegister()" class="bg-gray-200 px-4 rounded-xl text-lg">📷</button>
-                    </div>
-                    <input type="number" id="pPrice" placeholder="سعر الوحدة (دج)" class="p-3 bg-gray-50 border rounded-xl">
-                    <input type="number" id="pStock" placeholder="الكمية الأولية (للقطع/كجم)" step="any" class="p-3 bg-gray-50 border rounded-xl">
-                    <select id="pUnit" class="p-3 bg-gray-50 border rounded-xl">
-                        <option value="قطعة">قطعة</option>
-                        <option value="كجم">كجم (وزن)</option>
-                    </select>
-                    <div class="flex gap-2">
-                        <select id="pCategory" class="flex-1 p-3 bg-gray-50 border rounded-xl"></select>
-                        <button onclick="addNewCategory()" class="bg-indigo-100 text-indigo-700 px-3 rounded-xl text-sm font-bold">+ تصنيف</button>
-                    </div>
-                    <button onclick="addProduct()" class="md:col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold shadow-sm transition">💾 حفظ في المخزن</button>
+    <!-- ========== التطبيق الرئيسي ========== -->
+    <div id="mainAppContainer" style="display: none;">
+        <div class="max-w-5xl mx-auto px-4 py-4">
+            <!-- الهيدر -->
+            <div class="flex flex-wrap justify-between items-center gap-3 mb-6 bg-white/80 backdrop-blur-sm p-4 rounded-2xl shadow-md sticky top-2 z-20">
+                <div>
+                    <h1 class="text-3xl font-extrabold bg-gradient-to-l from-amber-700 to-orange-600 bg-clip-text text-transparent">هدهد</h1>
+                    <p class="text-xs text-gray-500">نظام أوفلاين · حماية متقدمة · مسح ضوئي</p>
+                </div>
+                <div class="flex gap-2 items-center">
+                    <span id="licenseStatusBadge" class="bg-amber-100 text-amber-800 text-xs px-3 py-1 rounded-full font-bold">✅ مرخص</span>
+                    <button onclick="exportBackup()" class="bg-emerald-600 text-white px-3 py-2 rounded-xl text-sm shadow">📁 نسخ احتياطي</button>
+                    <input type="file" id="importFileInput" accept=".json" class="hidden" onchange="importBackup(this.files[0])">
+                    <button onclick="document.getElementById('importFileInput').click()" class="bg-amber-600 text-white px-3 py-2 rounded-xl text-sm shadow">🔄 استعادة</button>
+                    <button onclick="openScannerForCart()" class="bg-orange-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 shadow-lg">📷 مسح للبيع</button>
                 </div>
             </div>
 
-            <!-- شريط البحث والفلترة -->
-            <div class="flex flex-wrap gap-2">
-                <input type="text" id="searchProduct" placeholder="🔍 بحث بالاسم / الباركود" class="flex-1 p-3 bg-white border rounded-xl shadow-sm">
-                <select id="filterCategory" class="p-3 bg-white border rounded-xl shadow-sm"></select>
+            <!-- تبويبات رئيسية -->
+            <div class="flex gap-2 mb-6">
+                <button id="tabInventoryBtn" class="tab-active flex-1 py-3 rounded-xl font-bold transition-all">📦 المخزون</button>
+                <button id="tabCartBtn" class="tab-inactive flex-1 py-3 rounded-xl font-bold transition-all">🛒 البيع</button>
+                <button id="tabHistoryBtn" class="tab-inactive flex-1 py-3 rounded-xl font-bold transition-all">📜 الفواتير</button>
             </div>
 
-            <!-- قائمة المنتجات مع عمليات التعديل والحذف -->
-            <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
-                <div class="p-3 border-b bg-gray-50 font-bold text-gray-600">📋 قائمة المخزون</div>
-                <div id="productsListContainer" class="scrollable-list divide-y divide-gray-100"></div>
-            </div>
-        </div>
-
-        <!-- ========== سلة البيع ========= -->
-        <div id="cartPanel" class="hidden space-y-5">
-            <div class="bg-white rounded-2xl shadow-sm p-4">
-                <div class="flex justify-between items-center mb-3">
-                    <h2 class="font-bold text-xl text-indigo-800">🛍️ سلة الشراء</h2>
-                    <button onclick="clearCart()" class="text-red-500 text-sm bg-red-50 px-3 py-1 rounded-full">تفريغ السلة</button>
+            <!-- ========== لوحة المخزون ========= -->
+            <div id="inventoryPanel" class="space-y-6">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div class="bg-white p-3 rounded-2xl shadow-sm"><span class="text-amber-600 text-xl font-black" id="statTotalProducts">0</span><p class="text-xs">المنتجات</p></div>
+                    <div class="bg-white p-3 rounded-2xl shadow-sm"><span class="text-amber-600 text-xl font-black" id="statTotalStockValue">0</span><p class="text-xs">قيمة المخزون (دج)</p></div>
+                    <div class="bg-white p-3 rounded-2xl shadow-sm"><span class="text-red-600 text-xl font-black" id="statLowStock">0</span><p class="text-xs">منخفض</p></div>
+                    <div class="bg-white p-3 rounded-2xl shadow-sm"><span class="text-green-600 text-xl font-black" id="statTotalSalesRevenue">0</span><p class="text-xs">المبيعات</p></div>
                 </div>
-                <div id="cartItemsList" class="space-y-3 max-h-96 overflow-y-auto mb-4"></div>
-                <div class="border-t pt-4 flex justify-between items-center text-lg font-bold">
-                    <span>الإجمالي النهائي</span>
-                    <span id="cartTotalPrice" class="text-2xl text-indigo-700">0 دج</span>
+
+                <!-- حذفنا نموذج الإضافة من هنا لأننا سنستخدم الزر العائم -->
+                
+                <div class="flex flex-wrap gap-2">
+                    <input type="text" id="searchProduct" placeholder="🔍 بحث" class="flex-1 p-3 bg-white border rounded-xl">
+                    <select id="filterCategory" class="p-3 bg-white border rounded-xl"></select>
                 </div>
-                <button onclick="checkout()" class="w-full mt-5 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold shadow-lg transition">💳 إنهاء الفاتورة & الطباعة</button>
+
+                <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+                    <div class="p-3 border-b bg-gray-50 font-bold">📋 قائمة المخزون</div>
+                    <div id="productsListContainer" class="scrollable-list divide-y"></div>
+                </div>
             </div>
-        </div>
 
-        <!-- ========== سجل الفواتير ========= -->
-        <div id="historyPanel" class="hidden space-y-4">
-            <div class="bg-white rounded-2xl shadow-sm p-4">
-                <h2 class="font-bold text-gray-700 mb-3">📑 المبيعات السابقة</h2>
-                <div id="salesHistoryList" class="space-y-3 max-h-[550px] overflow-y-auto"></div>
+            <!-- ========== سلة البيع ========= -->
+            <div id="cartPanel" class="hidden space-y-5">
+                <div class="bg-white rounded-2xl p-4 shadow-sm">
+                    <div class="flex justify-between items-center mb-3"><h2 class="font-bold text-xl text-amber-800">🛍️ سلة هدهد</h2><button onclick="clearCart()" class="text-red-500 text-sm bg-red-50 px-3 py-1 rounded-full">تفريغ</button></div>
+                    <div id="cartItemsList" class="space-y-3 max-h-96 overflow-y-auto mb-4"></div>
+                    <div class="border-t pt-4 flex justify-between items-center text-lg font-bold"><span>الإجمالي</span><span id="cartTotalPrice" class="text-2xl text-amber-700">0 دج</span></div>
+                    <button onclick="checkout()" class="w-full mt-5 bg-amber-600 text-white py-3 rounded-xl font-bold shadow-lg transition">💳 إنهاء الفاتورة</button>
+                </div>
             </div>
-        </div>
-    </div>
 
-    <!-- مودال الماسح الضوئي -->
-    <div id="scannerModal" class="hidden fixed inset-0 bg-black/95 z-50 flex flex-col p-5">
-        <div class="flex justify-between text-white mb-3">
-            <h3 id="scannerTitle" class="text-xl">مسح الباركود</h3>
-            <button onclick="closeScanner()" class="text-3xl">&times;</button>
-        </div>
-        <div id="reader" class="bg-black rounded-2xl overflow-hidden"></div>
-        <p class="text-white text-center mt-4 text-sm opacity-70">وجّه الكاميرا إلى الرمز الشريطي</p>
-    </div>
-
-    <!-- مودال إدخال الوزن للمنتجات بالكيلو -->
-    <div id="weightModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-sm rounded-3xl p-6 text-center shadow-2xl">
-            <div class="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">⚖️</div>
-            <h3 id="weightProductName" class="font-bold text-xl text-gray-800">المنتج</h3>
-            <p class="text-gray-500 text-sm mb-4">أدخل الوزن بالكيلوجرام</p>
-            <input type="number" id="weightInput" step="0.01" class="w-full text-center text-3xl font-bold p-3 border-b-4 border-indigo-500 focus:outline-none mb-5" placeholder="0.00">
-            <div class="flex gap-3">
-                <button onclick="closeWeightModal()" class="flex-1 bg-gray-100 py-3 rounded-2xl font-bold">إلغاء</button>
-                <button onclick="confirmWeightAdd()" class="flex-1 bg-indigo-600 text-white py-3 rounded-2xl font-bold shadow">تأكيد</button>
+            <!-- ========== سجل الفواتير ========= -->
+            <div id="historyPanel" class="hidden space-y-4">
+                <div class="bg-white rounded-2xl p-4 shadow-sm"><h2 class="font-bold mb-3">📑 المبيعات السابقة</h2><div id="salesHistoryList" class="space-y-3 max-h-[550px] overflow-y-auto"></div></div>
             </div>
         </div>
     </div>
 
-    <!-- مودال تعديل المنتج -->
-    <div id="editProductModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-3">
-            <h3 class="font-bold text-xl">✏️ تعديل المنتج</h3>
-            <input type="hidden" id="editId">
-            <input type="text" id="editName" placeholder="الاسم" class="w-full p-3 border rounded-xl">
-            <input type="text" id="editBarcode" placeholder="الباركود" class="w-full p-3 border rounded-xl">
-            <input type="number" id="editPrice" placeholder="السعر" class="w-full p-3 border rounded-xl">
-            <input type="number" id="editStock" placeholder="المخزون" step="any" class="w-full p-3 border rounded-xl">
-            <select id="editUnit" class="w-full p-3 border rounded-xl"><option value="قطعة">قطعة</option><option value="كجم">كجم</option></select>
-            <select id="editCategory" class="w-full p-3 border rounded-xl"></select>
-            <div class="flex gap-3 pt-2">
-                <button onclick="closeEditModal()" class="flex-1 bg-gray-200 py-2 rounded-xl">إلغاء</button>
-                <button onclick="saveProductEdit()" class="flex-1 bg-indigo-600 text-white py-2 rounded-xl">حفظ التعديل</button>
+    <!-- زر الإضافة العائم (علامة +) -->
+    <button id="fabAddButton" class="fab-add" title="إضافة سلعة جديدة">+</button>
+
+    <!-- مودال إضافة سلعة جديد (يظهر عند الضغط على الزر +) -->
+    <div id="addProductModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-black text-amber-800">➕ إضافة سلعة جديدة</h2>
+                <button onclick="closeAddProductModal()" class="text-3xl text-gray-400 hover:text-gray-600">&times;</button>
+            </div>
+            <div class="space-y-3">
+                <input type="text" id="modalPName" placeholder="اسم المنتج" class="w-full p-3 bg-gray-50 border rounded-xl">
+                <div class="flex gap-2">
+                    <input type="text" id="modalPBarcode" placeholder="الباركود" class="flex-1 p-3 bg-gray-50 border rounded-xl">
+                    <button onclick="openScannerForModal()" class="bg-gray-200 px-4 rounded-xl">📷</button>
+                </div>
+                <input type="number" id="modalPPrice" placeholder="السعر (دج)" class="w-full p-3 bg-gray-50 border rounded-xl">
+                <input type="number" id="modalPStock" placeholder="الكمية الأولية" step="any" class="w-full p-3 bg-gray-50 border rounded-xl">
+                <select id="modalPUnit" class="w-full p-3 bg-gray-50 border rounded-xl">
+                    <option value="قطعة">قطعة</option>
+                    <option value="كجم">كجم</option>
+                </select>
+                <div class="flex gap-2">
+                    <select id="modalPCategory" class="flex-1 p-3 bg-gray-50 border rounded-xl"></select>
+                    <button onclick="addNewCategoryFromModal()" class="bg-amber-100 text-amber-700 px-3 rounded-xl text-sm">+ تصنيف</button>
+                </div>
+                <button onclick="addProductFromModal()" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold">💾 حفظ السلعة</button>
             </div>
         </div>
     </div>
+
+    <!-- مودالات أخرى (مسح، وزن، تعديل) -->
+    <div id="scannerModal" class="hidden fixed inset-0 bg-black/95 z-50 flex flex-col p-5"><div class="flex justify-between text-white mb-3"><h3 id="scannerTitle">مسح الباركود</h3><button onclick="closeScanner()" class="text-3xl">&times;</button></div><div id="reader"></div><p class="text-white text-center mt-4 text-sm">ضع الباركود في المنتصف</p></div>
+    <div id="weightModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"><div class="bg-white w-full max-w-sm rounded-3xl p-6 text-center"><div class="bg-amber-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">⚖️</div><h3 id="weightProductName" class="font-bold text-xl">المنتج</h3><p class="text-gray-500 mb-4">أدخل الوزن بالكيلوجرام</p><input type="number" id="weightInput" step="0.01" class="w-full text-center text-3xl font-bold p-3 border-b-4 border-amber-500 mb-5" placeholder="0.00"><div class="flex gap-3"><button onclick="closeWeightModal()" class="flex-1 bg-gray-100 py-3 rounded-2xl">إلغاء</button><button onclick="confirmWeightAdd()" class="flex-1 bg-amber-600 text-white py-3 rounded-2xl">تأكيد</button></div></div></div>
+    <div id="editProductModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"><div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-3"><h3 class="font-bold text-xl">✏️ تعديل المنتج</h3><input type="hidden" id="editId"><input type="text" id="editName" placeholder="الاسم" class="w-full p-3 border rounded-xl"><input type="text" id="editBarcode" placeholder="الباركود" class="w-full p-3 border rounded-xl"><input type="number" id="editPrice" placeholder="السعر" class="w-full p-3 border rounded-xl"><input type="number" id="editStock" placeholder="المخزون" step="any" class="w-full p-3 border rounded-xl"><select id="editUnit" class="w-full p-3 border rounded-xl"><option value="قطعة">قطعة</option><option value="كجم">كجم</option></select><select id="editCategory" class="w-full p-3 border rounded-xl"></select><div class="flex gap-3"><button onclick="closeEditModal()" class="flex-1 bg-gray-200 py-2 rounded-xl">إلغاء</button><button onclick="saveProductEdit()" class="flex-1 bg-amber-600 text-white py-2 rounded-xl">حفظ</button></div></div></div>
 
     <script>
-        // ---------- نموذج البيانات الأساسية ----------
-        let products = [];
-        let categories = ["الحليب ومشتقاته", "اللحوم", "الخضر والفواكه", "المشروبات"];
-        let sales = [];      // الفواتير
-        let cart = [];       // { id, name, price, unit, qty, subtotal, productId, isWeight, originalStock? }
-
-        let html5QrCode = null;
-        let pendingScannerMode = null;   // 'register' or 'cart'
-        let pendingWeightProduct = null;
-
-        // تحميل البيانات من localStorage
-        function loadData() {
-            const storedProducts = localStorage.getItem('merchant_products');
-            const storedCategories = localStorage.getItem('merchant_categories');
-            const storedSales = localStorage.getItem('merchant_sales');
-            products = storedProducts ? JSON.parse(storedProducts) : [
-                { id: 101, name: "لحم عجل", price: 1850, unit: "كجم", category: "اللحوم", barcode: "123456", stock: 25.5 },
-                { id: 102, name: "حليب مبستر", price: 140, unit: "قطعة", category: "الحليب ومشتقاته", barcode: "789012", stock: 40 },
-                { id: 103, name: "تفاح", price: 320, unit: "كجم", category: "الخضر والفواكه", barcode: "345678", stock: 12.3 }
-            ];
-            if (storedCategories) categories = JSON.parse(storedCategories);
-            else categories = ["الحليب ومشتقاته", "اللحوم", "الخضر والفواكه", "المشروبات"];
-            sales = storedSales ? JSON.parse(storedSales) : [];
-            saveAllData();
+        // ------------------- نظام الحماية المتقدم -------------------
+        const SECRET_KEY = "hudhud2025secure";
+        function encryptData(data) {
+            let encoded = btoa(JSON.stringify(data));
+            let xorred = "";
+            for (let i = 0; i < encoded.length; i++) {
+                xorred += String.fromCharCode(encoded.charCodeAt(i) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length));
+            }
+            return btoa(xorred);
         }
-
-        function saveAllData() {
-            localStorage.setItem('merchant_products', JSON.stringify(products));
-            localStorage.setItem('merchant_categories', JSON.stringify(categories));
-            localStorage.setItem('merchant_sales', JSON.stringify(sales));
+        function decryptData(encrypted) {
+            try {
+                let xorred = atob(encrypted);
+                let decoded = "";
+                for (let i = 0; i < xorred.length; i++) {
+                    decoded += String.fromCharCode(xorred.charCodeAt(i) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length));
+                }
+                return JSON.parse(atob(decoded));
+            } catch(e) { return null; }
         }
-
-        // تحديث كل الواجهات
-        function refreshUI() {
-            renderProductsList();
-            renderCart();
-            renderSalesHistory();
-            updateStats();
-            fillCategoryDropdowns();
+        function saveLicense(expiryDateISO) {
+            const licenseData = { expiry: expiryDateISO, firstActivation: new Date().toISOString(), lastCheck: new Date().toISOString() };
+            const encrypted = encryptData(licenseData);
+            localStorage.setItem('hudhud_secure_license', encrypted);
+            localStorage.setItem('hudhud_last_time', new Date().toISOString());
         }
+        function getLicense() {
+            const encrypted = localStorage.getItem('hudhud_secure_license');
+            if (!encrypted) return null;
+            return decryptData(encrypted);
+        }
+        function isLicenseValid() {
+            const license = getLicense();
+            if (!license) return false;
+            const expiryDate = new Date(license.expiry);
+            if (isNaN(expiryDate.getTime())) return false;
+            const lastRecordedTime = localStorage.getItem('hudhud_last_time');
+            const now = new Date();
+            if (lastRecordedTime) {
+                const lastTime = new Date(lastRecordedTime);
+                if (!isNaN(lastTime.getTime()) && now < lastTime) {
+                    localStorage.removeItem('hudhud_secure_license');
+                    localStorage.removeItem('hudhud_last_time');
+                    return false;
+                }
+            }
+            localStorage.setItem('hudhud_last_time', now.toISOString());
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            expiryDate.setHours(0, 0, 0, 0);
+            return today <= expiryDate;
+        }
+        function activateLicense(code) {
+            const match = code.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})root$/);
+            if (!match) return { success: false, message: "صيغة غير صحيحة. " };
+            const day = parseInt(match[1], 10), month = parseInt(match[2], 10) - 1, year = parseInt(match[3], 10);
+            const expiryDate = new Date(year, month, day);
+            if (expiryDate.getFullYear() !== year || expiryDate.getMonth() !== month || expiryDate.getDate() !== day) return { success: false, message: "تاريخ غير صالح" };
+            const today = new Date(); today.setHours(0,0,0,0); expiryDate.setHours(0,0,0,0);
+            if (expiryDate < today) return { success: false, message: "هذا الرمز منتهي الصلاحية." };
+            saveLicense(expiryDate.toISOString());
+            return { success: true };
+        }
+        function checkInitialLicense() {
+            if (isLicenseValid()) {
+                document.getElementById('activationOverlay').style.display = 'none';
+                document.getElementById('mainAppContainer').style.display = 'block';
+                initApp();
+                updateLicenseBadge();
+            } else {
+                document.getElementById('activationOverlay').style.display = 'flex';
+                document.getElementById('mainAppContainer').style.display = 'none';
+                localStorage.removeItem('hudhud_secure_license');
+                localStorage.removeItem('hudhud_last_time');
+            }
+        }
+        function updateLicenseBadge() {
+            const license = getLicense();
+            if (license && license.expiry) {
+                const expiryDate = new Date(license.expiry);
+                const badge = document.getElementById('licenseStatusBadge');
+                if (badge) badge.innerHTML = `✅ صالح حتى ${expiryDate.toLocaleDateString('ar-EG')}`;
+            }
+        }
+        window.verifyActivation = function() {
+            const code = document.getElementById('activationCodeInput').value.trim();
+            const result = activateLicense(code);
+            if (result.success) {
+                document.getElementById('activationOverlay').style.display = 'none';
+                document.getElementById('mainAppContainer').style.display = 'block';
+                initApp();
+                updateLicenseBadge();
+            } else {
+                document.getElementById('activationErrorMsg').innerText = result.message;
+            }
+        };
 
-        // إحصائيات سريعة
+        // ------------------- بيانات التطبيق الأساسية -------------------
+        const DB_NAME = "hudhud_db";
+        const STORE_NAME = "hudhud_data";
+        let db;
+        let products = [], categories = [], sales = [], cart = [];
+        let html5QrCode = null, pendingWeightProduct = null;
+
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, 1);
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => { db = request.result; resolve(db); };
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME);
+                };
+            });
+        }
+        async function saveFullStateToDB() {
+            if (!db) await openDB();
+            const tx = db.transaction(STORE_NAME, "readwrite");
+            const store = tx.objectStore(STORE_NAME);
+            store.put(products, "products");
+            store.put(categories, "categories");
+            store.put(sales, "sales");
+            return tx.complete;
+        }
+        async function loadFullStateFromDB() {
+            if (!db) await openDB();
+            const tx = db.transaction(STORE_NAME, "readonly");
+            const store = tx.objectStore(STORE_NAME);
+            products = (await store.get("products")) || [];
+            categories = (await store.get("categories")) || [];
+            sales = (await store.get("sales")) || [];
+            if(!products.length) {
+                products = [
+                    { id: 101, name: "لحم عجل", price: 1850, unit: "كجم", category: "اللحوم", barcode: "123456", stock: 25.5 },
+                    { id: 102, name: "حليب مبستر", price: 140, unit: "قطعة", category: "الحليب ومشتقاته", barcode: "789012", stock: 40 },
+                    { id: 103, name: "تفاح", price: 320, unit: "كجم", category: "الخضر والفواكه", barcode: "345678", stock: 12.3 }
+                ];
+                categories = ["الحليب ومشتقاته", "اللحوم", "الخضر والفواكه", "المشروبات"];
+                sales = [];
+                await saveFullStateToDB();
+            }
+        }
+        async function persistAll() {
+            await saveFullStateToDB();
+            updateStats(); renderProductsList(); renderSalesHistory(); fillCategoryDropdowns();
+        }
         function updateStats() {
             document.getElementById('statTotalProducts').innerText = products.length;
             const totalStockValue = products.reduce((sum, p) => sum + (p.price * p.stock), 0);
@@ -224,363 +353,150 @@
             const totalRevenue = sales.reduce((sum, inv) => sum + inv.total, 0);
             document.getElementById('statTotalSalesRevenue').innerText = totalRevenue.toLocaleString();
         }
-
-        // ملء قوائم التصنيفات
         function fillCategoryDropdowns() {
-            const selects = ['pCategory', 'filterCategory', 'editCategory'];
+            const selects = ['filterCategory', 'editCategory', 'modalPCategory'];
             selects.forEach(id => {
                 const select = document.getElementById(id);
                 if(select) {
-                    let currentVal = select.value;
-                    select.innerHTML = categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-                    if(currentVal && categories.includes(currentVal)) select.value = currentVal;
+                    let cur = select.value;
+                    select.innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join('');
+                    if(cur && categories.includes(cur)) select.value = cur;
                 }
             });
         }
-
-        // إضافة تصنيف جديد
-        window.addNewCategory = function() {
-            let newCat = prompt("أدخل اسم التصنيف الجديد:");
-            if(newCat && newCat.trim() && !categories.includes(newCat.trim())) {
+        window.addNewCategoryFromModal = function() {
+            let newCat = prompt("تصنيف جديد:");
+            if(newCat && !categories.includes(newCat.trim())) {
                 categories.push(newCat.trim());
-                saveAllData();
-                fillCategoryDropdowns();
-            } else if(newCat && categories.includes(newCat.trim())) alert("التصنيف موجود مسبقاً");
-        }
-
-        // إضافة منتج جديد
-        window.addProduct = function() {
-            const name = document.getElementById('pName').value.trim();
-            const barcode = document.getElementById('pBarcode').value.trim();
-            const price = parseFloat(document.getElementById('pPrice').value);
-            const stock = parseFloat(document.getElementById('pStock').value);
-            const unit = document.getElementById('pUnit').value;
-            const category = document.getElementById('pCategory').value;
-            if(!name || isNaN(price) || price<=0 || isNaN(stock) || stock<0) {
-                alert("يرجى ملء الاسم والسعر والمخزون بشكل صحيح");
-                return;
+                persistAll();
             }
-            if(barcode && products.some(p => p.barcode === barcode && p.barcode !== "")) {
-                alert("هذا الباركود موجود مسبقاً");
-                return;
-            }
-            const newProduct = {
-                id: Date.now(),
-                name, barcode: barcode || null,
-                price, stock, unit, category
-            };
-            products.push(newProduct);
-            saveAllData();
-            refreshUI();
-            document.getElementById('pName').value = '';
-            document.getElementById('pBarcode').value = '';
-            document.getElementById('pPrice').value = '';
-            document.getElementById('pStock').value = '';
-        }
+        };
+        // إضافة المنتج من المودال
+        window.addProductFromModal = async function() {
+            const name = document.getElementById('modalPName').value.trim();
+            const barcode = document.getElementById('modalPBarcode').value.trim();
+            const price = parseFloat(document.getElementById('modalPPrice').value);
+            const stock = parseFloat(document.getElementById('modalPStock').value);
+            const unit = document.getElementById('modalPUnit').value;
+            const category = document.getElementById('modalPCategory').value;
+            if(!name || isNaN(price) || price<=0 || isNaN(stock) || stock<0) { alert("بيانات غير صالحة"); return; }
+            if(barcode && products.some(p => p.barcode === barcode)) { alert("باركود مكرر"); return; }
+            products.push({ id: Date.now(), name, barcode: barcode || null, price, stock, unit, category });
+            await persistAll();
+            closeAddProductModal();
+            // مسح الحقول
+            document.getElementById('modalPName').value = '';
+            document.getElementById('modalPBarcode').value = '';
+            document.getElementById('modalPPrice').value = '';
+            document.getElementById('modalPStock').value = '';
+        };
+        function closeAddProductModal() { document.getElementById('addProductModal').classList.add('hidden'); }
+        window.openAddProductModal = function() {
+            fillCategoryDropdowns();
+            document.getElementById('addProductModal').classList.remove('hidden');
+        };
+        // ربط الزر العائم
+        document.getElementById('fabAddButton').onclick = () => openAddProductModal();
 
-        // عرض المنتجات مع تعديل/حذف
         function renderProductsList() {
             const searchTerm = document.getElementById('searchProduct')?.value.toLowerCase() || '';
             const filterCat = document.getElementById('filterCategory')?.value || '';
-            let filtered = products.filter(p => 
-                (p.name.toLowerCase().includes(searchTerm) || (p.barcode && p.barcode.includes(searchTerm))) &&
-                (filterCat === '' || p.category === filterCat)
-            );
+            let filtered = products.filter(p => (p.name.toLowerCase().includes(searchTerm) || (p.barcode && p.barcode.includes(searchTerm))) && (filterCat === '' || p.category === filterCat));
             const container = document.getElementById('productsListContainer');
             if(!container) return;
-            if(filtered.length === 0) { container.innerHTML = '<div class="p-5 text-center text-gray-400">لا توجد منتجات</div>'; return; }
+            if(filtered.length===0){ container.innerHTML='<div class="p-5 text-center text-gray-400">لا توجد منتجات</div>'; return; }
             container.innerHTML = filtered.map(p => `
-                <div class="p-4 flex justify-between items-center hover:bg-gray-50 transition">
-                    <div class="flex-1">
-                        <div class="font-bold text-gray-800">${p.name}</div>
-                        <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs mt-1">
-                            <span class="bg-gray-100 px-2 py-0.5 rounded">${p.category}</span>
-                            <span class="text-indigo-600 font-bold">${p.price} دج / ${p.unit}</span>
-                            <span class="${p.stock < (p.unit==='كجم'?2:5) ? 'text-red-500 font-bold' : 'text-gray-500'}">📦 المخزون: ${p.stock} ${p.unit}</span>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="editProduct(${p.id})" class="bg-amber-50 text-amber-600 px-3 py-1.5 rounded-xl text-sm">✏️</button>
-                        <button onclick="deleteProduct(${p.id})" class="bg-red-50 text-red-500 px-3 py-1.5 rounded-xl text-sm">🗑️</button>
-                        <button onclick="quickAddToCart(${p.id})" class="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-xl text-sm font-bold">➕ بيع</button>
-                    </div>
-                </div>
-            `).join('');
+                <div class="p-4 flex justify-between items-center hover:bg-gray-50">
+                    <div><div class="font-bold">${escapeHtml(p.name)}</div><div class="flex gap-2 text-xs"><span class="bg-gray-100 px-2 rounded">${p.category}</span><span class="text-amber-600">${p.price} دج / ${p.unit}</span><span class="${p.stock<5?'text-red-500':'text-gray-500'}">📦 ${p.stock}</span></div></div>
+                    <div class="flex gap-2"><button onclick="editProduct(${p.id})" class="bg-amber-50 px-3 py-1 rounded-xl">✏️</button><button onclick="deleteProduct(${p.id})" class="bg-red-50 px-3 py-1 rounded-xl">🗑️</button><button onclick="quickAddToCart(${p.id})" class="bg-orange-50 text-orange-700 px-3 py-1 rounded-xl">➕ بيع</button></div>
+                </div>`).join('');
         }
-
-        window.editProduct = function(id) {
-            const prod = products.find(p => p.id === id);
-            if(!prod) return;
-            document.getElementById('editId').value = prod.id;
-            document.getElementById('editName').value = prod.name;
-            document.getElementById('editBarcode').value = prod.barcode || '';
-            document.getElementById('editPrice').value = prod.price;
-            document.getElementById('editStock').value = prod.stock;
-            document.getElementById('editUnit').value = prod.unit;
-            document.getElementById('editCategory').value = prod.category;
-            fillCategoryDropdowns(); // للتأكد من القائمة
-            document.getElementById('editProductModal').classList.remove('hidden');
-        }
+        function escapeHtml(str) { return String(str).replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+        window.editProduct = function(id) { const prod = products.find(p=>p.id===id); if(prod){ document.getElementById('editId').value=prod.id; document.getElementById('editName').value=prod.name; document.getElementById('editBarcode').value=prod.barcode||''; document.getElementById('editPrice').value=prod.price; document.getElementById('editStock').value=prod.stock; document.getElementById('editUnit').value=prod.unit; document.getElementById('editCategory').value=prod.category; fillCategoryDropdowns(); document.getElementById('editProductModal').classList.remove('hidden'); } }
         window.closeEditModal = function() { document.getElementById('editProductModal').classList.add('hidden'); }
-        window.saveProductEdit = function() {
+        window.saveProductEdit = async function() {
             const id = parseInt(document.getElementById('editId').value);
-            const prodIndex = products.findIndex(p => p.id === id);
-            if(prodIndex === -1) return;
+            const idx = products.findIndex(p=>p.id===id);
+            if(idx===-1) return;
             const newName = document.getElementById('editName').value.trim();
             const newBarcode = document.getElementById('editBarcode').value.trim();
             const newPrice = parseFloat(document.getElementById('editPrice').value);
             const newStock = parseFloat(document.getElementById('editStock').value);
             const newUnit = document.getElementById('editUnit').value;
             const newCat = document.getElementById('editCategory').value;
-            if(!newName || isNaN(newPrice) || newPrice<=0 || isNaN(newStock) || newStock<0) { alert("بيانات غير صالحة"); return; }
-            if(newBarcode && products.some(p => p.barcode === newBarcode && p.id !== id)) { alert("باركود مستخدم"); return; }
-            products[prodIndex] = { ...products[prodIndex], name: newName, barcode: newBarcode || null, price: newPrice, stock: newStock, unit: newUnit, category: newCat };
-            saveAllData();
-            refreshUI();
+            if(!newName || isNaN(newPrice) || newPrice<=0 || isNaN(newStock) || newStock<0) { alert("بيانات خاطئة"); return; }
+            if(newBarcode && products.some(p=>p.barcode===newBarcode && p.id!==id)) { alert("باركود مستخدم"); return; }
+            products[idx] = {...products[idx], name:newName, barcode:newBarcode||null, price:newPrice, stock:newStock, unit:newUnit, category:newCat};
+            await persistAll();
             closeEditModal();
         }
-        window.deleteProduct = function(id) {
-            if(confirm("هل أنت متأكد من حذف هذا المنتج؟")) {
-                products = products.filter(p => p.id !== id);
-                saveAllData();
-                refreshUI();
-            }
-        }
+        window.deleteProduct = async function(id) { if(confirm("حذف المنتج؟")){ products=products.filter(p=>p.id!==id); await persistAll(); } }
 
-        // إضافة سريعة للسلة (من المخزون)
-        window.quickAddToCart = function(productId) {
-            const prod = products.find(p => p.id === productId);
-            if(prod) handleProductToCart(prod);
-        }
-
+        // سلة ووزن وبيع (نفس الكود السابق مختصراً)
+        window.quickAddToCart = function(id) { const prod = products.find(p=>p.id===id); if(prod) handleProductToCart(prod); }
         function handleProductToCart(product) {
-            if(product.unit === "كجم") {
-                pendingWeightProduct = product;
-                document.getElementById('weightProductName').innerText = product.name;
-                document.getElementById('weightInput').value = '';
-                document.getElementById('weightModal').classList.remove('hidden');
-                setTimeout(() => document.getElementById('weightInput').focus(), 200);
-            } else {
-                addItemToCart(product, 1);
-            }
+            if(product.unit === "كجم") { pendingWeightProduct = product; document.getElementById('weightProductName').innerText = product.name; document.getElementById('weightInput').value=''; document.getElementById('weightModal').classList.remove('hidden'); }
+            else { addItemToCart(product, 1); }
         }
-
         function addItemToCart(product, quantity) {
-            // التحقق من المخزون الكافي
-            if(product.stock < quantity) {
-                alert(`المخزون غير كافٍ! المتوفر: ${product.stock} ${product.unit}`);
-                return false;
-            }
-            const existingIndex = cart.findIndex(item => item.productId === product.id && item.isWeight === (product.unit === 'كجم'));
-            if(existingIndex !== -1 && product.unit !== 'كجم') {
-                // للقطع يمكن دمج الكمية
-                const newQty = cart[existingIndex].qty + quantity;
-                if(product.stock < newQty) { alert(`المخزون لا يكفي لزيادة الكمية إلى ${newQty}`); return false; }
-                cart[existingIndex].qty = newQty;
-                cart[existingIndex].subtotal = cart[existingIndex].price * newQty;
-            } else {
-                cart.push({
-                    productId: product.id,
-                    name: product.name,
-                    price: product.price,
-                    unit: product.unit,
-                    qty: quantity,
-                    subtotal: product.price * quantity,
-                    isWeight: product.unit === 'كجم'
-                });
-            }
-            renderCart();
-            return true;
+            if(product.stock < quantity) { alert(`المخزون: ${product.stock} ${product.unit}`); return false; }
+            const existing = cart.find(i => i.productId === product.id && i.isWeight === (product.unit === 'كجم'));
+            if(existing && product.unit !== 'كجم') {
+                const newQty = existing.qty + quantity;
+                if(product.stock < newQty) { alert("كمية غير متوفرة"); return false; }
+                existing.qty = newQty;
+                existing.subtotal = existing.price * newQty;
+            } else { cart.push({ productId: product.id, name: product.name, price: product.price, unit: product.unit, qty: quantity, subtotal: product.price * quantity, isWeight: product.unit === 'كجم' }); }
+            renderCart(); return true;
         }
-
         window.confirmWeightAdd = function() {
             const weight = parseFloat(document.getElementById('weightInput').value);
-            if(isNaN(weight) || weight <= 0) { alert("أدخل وزناً صحيحاً"); return; }
-            if(pendingWeightProduct && pendingWeightProduct.stock < weight) {
-                alert(`المخزون غير كافٍ! المتوفر: ${pendingWeightProduct.stock} كجم`);
-                closeWeightModal();
-                return;
-            }
+            if(isNaN(weight)||weight<=0) { alert("وزن صحيح"); return; }
+            if(pendingWeightProduct && pendingWeightProduct.stock < weight) { alert(`المخزون ${pendingWeightProduct.stock} كجم`); closeWeightModal(); return; }
             addItemToCart(pendingWeightProduct, weight);
             closeWeightModal();
         }
         function closeWeightModal() { document.getElementById('weightModal').classList.add('hidden'); pendingWeightProduct = null; }
-
-        // عرض السلة مع إمكانية تعديل الوزن / زيادة القطع
-        function renderCart() {
-            const container = document.getElementById('cartItemsList');
-            if(!container) return;
-            if(cart.length === 0) { container.innerHTML = '<div class="text-center text-gray-400 py-6">السلة فارغة</div>'; document.getElementById('cartTotalPrice').innerText = '0 دج'; return; }
-            let total = 0;
-            container.innerHTML = cart.map((item, idx) => {
-                total += item.subtotal;
-                if(item.isWeight) {
-                    return `<div class="bg-gray-50 p-3 rounded-xl flex justify-between items-center">
-                        <div><span class="font-bold">${item.name}</span><div class="text-xs text-gray-500">${item.price} دج/كجم · الوزن: ${item.qty} كجم</div></div>
-                        <div class="flex items-center gap-3"><span class="font-bold text-indigo-700">${item.subtotal.toLocaleString()} دج</span>
-                        <button onclick="editCartItemWeight(${idx})" class="bg-white border px-3 py-1 rounded-lg text-xs">⚖️ تعديل الوزن</button>
-                        <button onclick="removeCartItem(${idx})" class="text-red-500 text-xl">🗑️</button></div>
-                    </div>`;
-                } else {
-                    return `<div class="bg-gray-50 p-3 rounded-xl flex justify-between items-center">
-                        <div><span class="font-bold">${item.name}</span><div class="text-xs text-gray-500">${item.price} دج/قطعة</div></div>
-                        <div class="flex items-center gap-2">
-                            <button onclick="changeQty(${idx}, -1)" class="bg-white w-7 h-7 rounded-full shadow">-</button>
-                            <span class="w-8 text-center font-bold">${item.qty}</span>
-                            <button onclick="changeQty(${idx}, 1)" class="bg-white w-7 h-7 rounded-full shadow">+</button>
-                            <span class="font-bold w-20 text-right">${item.subtotal.toLocaleString()} دج</span>
-                            <button onclick="removeCartItem(${idx})" class="text-red-500 text-xl mr-1">🗑️</button>
-                        </div>
-                    </div>`;
-                }
+        function renderCart() { /* مختصر */ 
+            const container = document.getElementById('cartItemsList'); if(!container) return;
+            if(cart.length===0){ container.innerHTML='<div class="text-center text-gray-400 py-6">السلة فارغة</div>'; document.getElementById('cartTotalPrice').innerText='0 دج'; return; }
+            let total=0;
+            container.innerHTML = cart.map((item,idx)=>{ total+=item.subtotal;
+                if(item.isWeight) return `<div class="bg-gray-50 p-3 rounded-xl flex justify-between"><div><span class="font-bold">${escapeHtml(item.name)}</span><div class="text-xs">${item.price} دج/كجم · ${item.qty} كجم</div></div><div><span class="font-bold">${item.subtotal.toLocaleString()} دج</span><button onclick="editCartItemWeight(${idx})" class="bg-white border px-2 py-1 rounded mx-2">⚖️</button><button onclick="removeCartItem(${idx})" class="text-red-500">🗑️</button></div></div>`;
+                else return `<div class="bg-gray-50 p-3 rounded-xl flex justify-between"><div><span class="font-bold">${escapeHtml(item.name)}</span><div class="text-xs">${item.price} دج/قطعة</div></div><div><button onclick="changeQty(${idx},-1)" class="bg-white w-7 h-7 rounded-full shadow">-</button><span class="mx-2 w-8 text-center">${item.qty}</span><button onclick="changeQty(${idx},1)" class="bg-white w-7 h-7 rounded-full shadow">+</button><span class="mx-2 font-bold">${item.subtotal.toLocaleString()} دج</span><button onclick="removeCartItem(${idx})" class="text-red-500">🗑️</button></div></div>`;
             }).join('');
             document.getElementById('cartTotalPrice').innerHTML = total.toLocaleString() + ' دج';
         }
         window.removeCartItem = function(idx) { cart.splice(idx,1); renderCart(); }
-        window.changeQty = function(idx, delta) {
-            const item = cart[idx];
-            if(item.isWeight) return;
-            const newQty = item.qty + delta;
-            if(newQty < 1) { removeCartItem(idx); return; }
-            const productStock = products.find(p => p.id === item.productId)?.stock;
-            if(productStock !== undefined && newQty > productStock) { alert(`لا يتوفر سوى ${productStock} قطعة`); return; }
-            item.qty = newQty;
-            item.subtotal = item.price * newQty;
-            renderCart();
-        }
-        window.editCartItemWeight = function(idx) {
-            const item = cart[idx];
-            if(!item.isWeight) return;
-            const prod = products.find(p => p.id === item.productId);
-            if(prod) {
-                pendingWeightProduct = prod;
-                document.getElementById('weightProductName').innerText = prod.name;
-                document.getElementById('weightInput').value = item.qty;
-                document.getElementById('weightModal').classList.remove('hidden');
-                // بعد التأكيد، نقوم بتعديل العنصر
-                window.confirmWeightEdit = function() {
-                    const newWeight = parseFloat(document.getElementById('weightInput').value);
-                    if(newWeight>0 && prod.stock >= newWeight) {
-                        cart[idx].qty = newWeight;
-                        cart[idx].subtotal = cart[idx].price * newWeight;
-                        renderCart();
-                        closeWeightModal();
-                    } else alert("وزن غير صالح أو يتجاوز المخزون");
-                    window.confirmWeightAdd = originalConfirm;
-                }
-                const originalConfirm = window.confirmWeightAdd;
-                window.confirmWeightAdd = function() { window.confirmWeightEdit(); window.confirmWeightAdd = originalConfirm; }
-            }
-        }
-        window.clearCart = function() { if(cart.length && confirm("تفريغ السلة بالكامل؟")) { cart = []; renderCart(); } }
-
-        // إنهاء الفاتورة
-        window.checkout = function() {
-            if(cart.length === 0) { alert("السلة فارغة"); return; }
-            // التحقق النهائي من المخزون قبل الخصم
-            for(let item of cart) {
-                const prod = products.find(p => p.id === item.productId);
-                if(!prod) { alert(`المنتج ${item.name} لم يعد موجوداً`); return; }
-                if(prod.stock < item.qty) { alert(`المنتج ${item.name} المخزون غير كافٍ (المتبقي ${prod.stock})`); return; }
-            }
-            // خصم المخزون
-            for(let item of cart) {
-                const prod = products.find(p => p.id === item.productId);
-                prod.stock = parseFloat((prod.stock - item.qty).toFixed(3));
-            }
-            const totalInvoice = cart.reduce((s,i)=>s+i.subtotal,0);
-            const newInvoice = {
-                id: Date.now(),
-                date: new Date().toLocaleString('ar-EG'),
-                items: cart.map(i => ({ name:i.name, price:i.price, qty:i.qty, unit:i.unit, subtotal:i.subtotal })),
-                total: totalInvoice
-            };
-            sales.unshift(newInvoice);
-            saveAllData();
-            cart = [];
-            refreshUI();
-            alert(`تمت الفاتورة بنجاح بقيمة ${totalInvoice.toLocaleString()} دج`);
-            // طباعة فاتورة مبسطة
-            printInvoice(newInvoice);
-        }
-
-        function printInvoice(invoice) {
-            let printWindow = window.open('', '_blank');
-            let itemsHtml = invoice.items.map(i => `<tr><td>${i.name}</td><td>${i.qty} ${i.unit}</td><td>${i.price.toLocaleString()}</td><td>${i.subtotal.toLocaleString()} دج</td></tr>`).join('');
-            printWindow.document.write(`
-                <html dir="rtl"><head><title>فاتورة رقم ${invoice.id}</title><style>body{font-family:sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{border-bottom:1px solid #ddd;padding:8px;text-align:right}</style></head>
-                <body><h2>📄 فاتورة البيع</h2><p>التاريخ: ${invoice.date}</p><table><tr><th>المنتج</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr>${itemsHtml}<tr><td colspan="3"><strong>المجموع</strong></td><td><strong>${invoice.total.toLocaleString()} دج</strong></td></tr></table><br><button onclick="window.print()">🖨️ طباعة</button></body></html>
-            `);
-            printWindow.document.close();
-        }
-
-        function renderSalesHistory() {
-            const container = document.getElementById('salesHistoryList');
-            if(!container) return;
-            if(sales.length === 0) { container.innerHTML = '<div class="text-center text-gray-400 p-5">لا توجد فواتير بعد</div>'; return; }
-            container.innerHTML = sales.map(inv => `
-                <div class="bg-white border rounded-xl p-4 shadow-sm">
-                    <div class="flex justify-between items-center flex-wrap gap-2">
-                        <span class="font-bold text-indigo-700">#${inv.id}</span>
-                        <span class="text-xs text-gray-500">${inv.date}</span>
-                        <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-bold">${inv.total.toLocaleString()} دج</span>
-                        <button onclick="viewInvoiceDetails(${inv.id})" class="text-indigo-600 text-sm underline">تفاصيل</button>
-                        <button onclick="deleteInvoice(${inv.id})" class="text-red-500 text-sm">حذف</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-        window.viewInvoiceDetails = function(id) {
-            const inv = sales.find(s => s.id === id);
-            if(inv) alert(`📄 فاتورة ${inv.id}\n${inv.date}\nالبنود:\n${inv.items.map(i=>`${i.name} (${i.qty} ${i.unit}) = ${i.subtotal.toLocaleString()} دج`).join('\n')}\nالإجمالي: ${inv.total.toLocaleString()} دج`);
-        }
-        window.deleteInvoice = function(id) { if(confirm("حذف الفاتورة نهائياً؟")) { sales = sales.filter(s=>s.id !== id); saveAllData(); renderSalesHistory(); updateStats(); } }
-
-        // --- الماسح الضوئي ---
-        window.openScannerForCart = function() { openScanner('cart'); }
-        window.openScannerForRegister = function() { openScanner('register'); }
+        window.changeQty = function(idx, delta) { let item=cart[idx]; if(item.isWeight) return; let newQty=item.qty+delta; if(newQty<1){ removeCartItem(idx); return; } const prod=products.find(p=>p.id===item.productId); if(prod && newQty>prod.stock){ alert(`المخزون ${prod.stock}`); return; } item.qty=newQty; item.subtotal=item.price*newQty; renderCart(); }
+        window.editCartItemWeight = function(idx) { /* مثل السابق */ let item=cart[idx]; if(!item.isWeight) return; const prod=products.find(p=>p.id===item.productId); if(prod){ pendingWeightProduct=prod; document.getElementById('weightProductName').innerText=prod.name; document.getElementById('weightInput').value=item.qty; document.getElementById('weightModal').classList.remove('hidden'); const origConfirm = window.confirmWeightAdd; window.confirmWeightAdd = ()=>{ let w=parseFloat(document.getElementById('weightInput').value); if(w>0 && prod.stock>=w){ cart[idx].qty=w; cart[idx].subtotal=cart[idx].price*w; renderCart(); closeWeightModal(); } else alert("وزن غير صالح"); window.confirmWeightAdd = origConfirm; }; } }
+        window.clearCart = function() { if(cart.length && confirm("تفريغ السلة")) { cart=[]; renderCart(); } }
+        window.checkout = async function() { /* مختصر */ if(cart.length===0) return alert("السلة فارغة"); for(let item of cart) { const prod=products.find(p=>p.id===item.productId); if(!prod || prod.stock<item.qty){ alert(`نقص في مخزون ${item.name}`); return; } } for(let item of cart) { const prod=products.find(p=>p.id===item.productId); prod.stock = parseFloat((prod.stock - item.qty).toFixed(3)); } const totalInvoice = cart.reduce((s,i)=>s+i.subtotal,0); const newInvoice = { id: Date.now(), date: new Date().toLocaleString('ar-EG'), items: cart.map(i=>({name:i.name, price:i.price, qty:i.qty, unit:i.unit, subtotal:i.subtotal})), total: totalInvoice }; sales.unshift(newInvoice); await persistAll(); cart = []; refreshUI(); alert(`تمت الفاتورة: ${totalInvoice.toLocaleString()} دج`); let win=window.open('','_blank'); win.document.write(`<html dir="rtl"><head><title>فاتورة هدهد</title><style>body{font-family:sans-serif;padding:20px;}table{width:100%}th,td{padding:8px;text-align:right}</style></head><body><h2>📄 فاتورة هدهد</h2><p>${newInvoice.date}</p><table border=0><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr>${newInvoice.items.map(i=>`<tr><td>${escapeHtml(i.name)}</td><td>${i.qty} ${i.unit}</td><td>${i.price.toLocaleString()}</td><td>${i.subtotal.toLocaleString()} دج</td></tr>`).join('')} </table><h3>المجموع: ${totalInvoice.toLocaleString()} دج</h3><button onclick="window.print()">🖨️ طباعة</button></body></html>`); win.document.close(); }
+        function renderSalesHistory() { const container = document.getElementById('salesHistoryList'); if(!container) return; if(sales.length===0){ container.innerHTML='<div class="text-center text-gray-400 p-5">لا توجد فواتير</div>'; return; } container.innerHTML = sales.map(inv=>`<div class="bg-white border rounded-xl p-4"><div class="flex justify-between"><span class="font-bold text-amber-700">#${inv.id}</span><span class="text-xs">${inv.date}</span><span class="bg-green-100 px-3 py-1 rounded-full">${inv.total.toLocaleString()} دج</span><button onclick="viewInvoice(${inv.id})" class="text-amber-600 underline">تفاصيل</button><button onclick="deleteInvoice(${inv.id})" class="text-red-500">حذف</button></div></div>`).join(''); }
+        window.viewInvoice = function(id){ const inv=sales.find(s=>s.id===id); if(inv) alert(`فاتورة ${inv.id}\n${inv.date}\n${inv.items.map(i=>`${i.name} (${i.qty} ${i.unit}) = ${i.subtotal.toLocaleString()} دج`).join('\n')}\nالمجموع: ${inv.total.toLocaleString()} دج`); }
+        window.deleteInvoice = async function(id){ if(confirm("حذف الفاتورة؟")){ sales=sales.filter(s=>s.id!==id); await persistAll(); renderSalesHistory(); updateStats(); } }
+        // الماسح الضوئي
+        window.openScannerForCart = () => openScanner('cart');
+        window.openScannerForRegister = () => openScanner('register');
+        window.openScannerForModal = () => openScanner('modal');
         function openScanner(mode) {
             document.getElementById('scannerModal').classList.remove('hidden');
-            document.getElementById('scannerTitle').innerText = mode === 'cart' ? 'مسح لإضافة المنتج للبيع' : 'مسح لتعبئة الباركود في النموذج';
-            pendingScannerMode = mode;
+            document.getElementById('scannerTitle').innerText = mode==='cart'? 'مسح لإضافة المنتج' : (mode==='register'?'مسح لتعبئة الباركود':'مسح لإضافة الباركود');
             html5QrCode = new Html5Qrcode("reader");
-            const config = { fps: 10, qrbox: { width: 280, height: 180 } };
-            html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
-                if(pendingScannerMode === 'register') {
-                    document.getElementById('pBarcode').value = decodedText;
-                    closeScanner();
-                } else {
-                    const foundProduct = products.find(p => p.barcode === decodedText);
-                    if(foundProduct) { closeScanner(); handleProductToCart(foundProduct); }
-                    else { alert("لم يتم العثور على منتج بهذا الباركود"); closeScanner(); }
-                }
-            }, (err) => { console.warn(err); });
+            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 280, height: 180 } }, (decodedText) => {
+                if(mode==='register') { document.getElementById('pBarcode').value = decodedText; closeScanner(); }
+                else if(mode==='modal') { document.getElementById('modalPBarcode').value = decodedText; closeScanner(); }
+                else { const prod = products.find(p=>p.barcode === decodedText); if(prod) { closeScanner(); handleProductToCart(prod); } else { alert("لم يتم العثور على المنتج"); closeScanner(); } }
+            }, (err) => console.warn);
         }
-        function closeScanner() {
-            if(html5QrCode) { html5QrCode.stop().then(()=>{ document.getElementById('scannerModal').classList.add('hidden'); html5QrCode=null; }).catch(e=>{}); }
-            else document.getElementById('scannerModal').classList.add('hidden');
-        }
-
-        // التبويبات
-        function switchTab(tab) {
-            document.getElementById('inventoryPanel').classList.add('hidden');
-            document.getElementById('cartPanel').classList.add('hidden');
-            document.getElementById('historyPanel').classList.add('hidden');
-            if(tab === 'inventory') document.getElementById('inventoryPanel').classList.remove('hidden');
-            if(tab === 'cart') document.getElementById('cartPanel').classList.remove('hidden');
-            if(tab === 'history') document.getElementById('historyPanel').classList.remove('hidden');
-            const btnInv = document.getElementById('tabInventoryBtn'), btnCart = document.getElementById('tabCartBtn'), btnHist = document.getElementById('tabHistoryBtn');
-            btnInv.classList.toggle('tab-active', tab === 'inventory'); btnInv.classList.toggle('tab-inactive', tab !== 'inventory');
-            btnCart.classList.toggle('tab-active', tab === 'cart'); btnCart.classList.toggle('tab-inactive', tab !== 'cart');
-            btnHist.classList.toggle('tab-active', tab === 'history'); btnHist.classList.toggle('tab-inactive', tab !== 'history');
-        }
-        document.getElementById('tabInventoryBtn').onclick = () => switchTab('inventory');
-        document.getElementById('tabCartBtn').onclick = () => switchTab('cart');
-        document.getElementById('tabHistoryBtn').onclick = () => switchTab('history');
-        document.getElementById('searchProduct').addEventListener('input', () => renderProductsList());
-        document.getElementById('filterCategory').addEventListener('change', () => renderProductsList());
-
-        loadData(); refreshUI(); switchTab('inventory');
+        function closeScanner() { if(html5QrCode) html5QrCode.stop().then(()=>{ document.getElementById('scannerModal').classList.add('hidden'); html5QrCode=null; }); else document.getElementById('scannerModal').classList.add('hidden'); }
+        // النسخ الاحتياطي
+        window.exportBackup = async function() { const backup = { products, categories, sales, version: "1.0", date: new Date().toISOString() }; const dataStr = JSON.stringify(backup, null, 2); const blob = new Blob([dataStr], {type: "application/json"}); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "هدهد_backup.json"; a.click(); URL.revokeObjectURL(url); alert("تم تصدير نسخة احتياطية"); };
+        window.importBackup = async function(file) { if(!file) return; const reader = new FileReader(); reader.onload = async function(e) { try { const data = JSON.parse(e.target.result); if(data.products && data.categories && data.sales) { products = data.products; categories = data.categories; sales = data.sales; await saveFullStateToDB(); refreshUI(); alert("تم استعادة البيانات بنجاح!"); } else alert("ملف غير صالح"); } catch(err) { alert("خطأ في قراءة الملف"); } }; reader.readAsText(file); };
+        async function refreshUI() { await loadFullStateFromDB(); renderProductsList(); renderCart(); renderSalesHistory(); updateStats(); fillCategoryDropdowns(); }
+        function switchTab(tab) { document.getElementById('inventoryPanel').classList.toggle('hidden', tab!=='inventory'); document.getElementById('cartPanel').classList.toggle('hidden', tab!=='cart'); document.getElementById('historyPanel').classList.toggle('hidden', tab!=='history'); ['tabInventoryBtn','tabCartBtn','tabHistoryBtn'].forEach((id,idx)=> { const btn=document.getElementById(id); const active = (idx===0 && tab==='inventory') || (idx===1 && tab==='cart') || (idx===2 && tab==='history'); btn.classList.toggle('tab-active', active); btn.classList.toggle('tab-inactive', !active); }); }
+        async function initApp() { await openDB(); await loadFullStateFromDB(); refreshUI(); switchTab('inventory'); document.getElementById('tabInventoryBtn').onclick = () => switchTab('inventory'); document.getElementById('tabCartBtn').onclick = () => switchTab('cart'); document.getElementById('tabHistoryBtn').onclick = () => switchTab('history'); document.getElementById('searchProduct').addEventListener('input', ()=>renderProductsList()); document.getElementById('filterCategory').addEventListener('change', ()=>renderProductsList()); }
+        checkInitialLicense();
     </script>
 </body>
 </html>
